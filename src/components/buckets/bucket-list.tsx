@@ -39,7 +39,7 @@ export function BucketList() {
     );
   }
 
-  const getDisplayName = (connection: { name?: string; endpoint: string }) => {
+  const getDisplayName = (connection: { name?: string | null; endpoint: string }) => {
     return connection.name || connection.endpoint;
   };
 

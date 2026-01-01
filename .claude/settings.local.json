@@ -4,7 +4,11 @@
       "Bash(ls:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(tree:*)"
     ]
   }
 }

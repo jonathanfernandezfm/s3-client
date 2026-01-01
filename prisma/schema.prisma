@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// S3 Connection configuration
+// Stores connection details for S3-compatible storage endpoints
+model Connection {
+  id              String   @id @default(uuid())
+  name            String?  // Optional display name for the connection
+  endpoint        String   // S3 endpoint URL (e.g., https://s3.amazonaws.com)
+  region          String   @default("us-east-1")
+  accessKeyId     String   // AWS access key ID
+  secretAccessKey String   // AWS secret access key (encrypted in production)
+  forcePathStyle  Boolean  @default(true) // Required for MinIO and some S3-compatible services
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Future: Add userId when authentication is implemented
+  // userId String?
+  // user   User?   @relation(fields: [userId], references: [id])
+
+  @@map("connections")
+}
+
+// Future models for authentication
+// model User {
+//   id          String       @id @default(uuid())
+//   email       String       @unique
+//   name        String?
+//   connections Connection[]
+//   createdAt   DateTime     @default(now())
+//   updatedAt   DateTime     @updatedAt
+//
+//   @@map("users")
+// }

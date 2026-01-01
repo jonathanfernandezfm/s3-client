@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import type { S3Connection } from "@/types";
+import { getConnectionById } from "@/lib/db/connections";
 
 export async function POST(request: NextRequest) {
   try {
     const {
-      connection,
+      connectionId,
       bucket,
       path,
-    }: { connection: S3Connection; bucket: string; path: string } =
+    }: { connectionId: string; bucket: string; path: string } =
       await request.json();
 
-    if (!connection || !bucket || !path) {
+    if (!connectionId || !bucket || !path) {
       return NextResponse.json(
-        { error: "Connection, bucket, and path are required" },
+        { error: "connectionId, bucket, and path are required" },
         { status: 400 }
+      );
+    }
+
+    const connection = await getConnectionById(connectionId);
+    if (!connection) {
+      return NextResponse.json(
+        { error: "Connection not found" },
+        { status: 404 }
       );
     }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useConnectionStore } from "@/lib/stores/connection-store";
+import { useConnections } from "@/lib/queries/connections";
 import { Database, Settings, FolderOpen, CheckCircle2, XCircle } from "lucide-react";
 
 const navItems = [
@@ -16,7 +17,8 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { connections, statuses } = useConnectionStore();
+  const { data: connections = [] } = useConnections();
+  const { statuses } = useConnectionStore();
 
   const connectedCount = connections.filter(
     (conn) => statuses[conn.id]?.connected

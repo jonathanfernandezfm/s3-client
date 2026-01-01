@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useConnectionStore } from "@/lib/stores/connection-store";
+import {
+  useConnections,
+  useDeleteConnection,
+  type ConnectionResponse,
+} from "@/lib/queries/connections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle2,
   XCircle,
@@ -28,27 +34,28 @@ import {
   Server,
   Loader2,
 } from "lucide-react";
-import type { S3Connection } from "@/types";
 
 interface ConnectionListProps {
   onAdd: () => void;
-  onEdit: (connection: S3Connection) => void;
+  onEdit: (connection: ConnectionResponse) => void;
 }
 
 export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
-  const { connections, statuses, removeConnection, setStatus } =
-    useConnectionStore();
+  const { data: connections = [], isLoading } = useConnections();
+  const { statuses, setStatus, removeStatus } = useConnectionStore();
+  const deleteConnection = useDeleteConnection();
+
   const [deletingConnection, setDeletingConnection] =
-    useState<S3Connection | null>(null);
+    useState<ConnectionResponse | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
 
-  const handleConnect = async (connection: S3Connection) => {
+  const handleConnect = async (connection: ConnectionResponse) => {
     setConnectingId(connection.id);
     try {
       const response = await fetch("/api/connections/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(connection),
+        body: JSON.stringify({ id: connection.id }),
       });
 
       const data = await response.json();
@@ -70,16 +77,40 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
     setStatus(connectionId, { connected: false });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingConnection) {
-      removeConnection(deletingConnection.id);
-      setDeletingConnection(null);
+      try {
+        await deleteConnection.mutateAsync(deletingConnection.id);
+        removeStatus(deletingConnection.id);
+        toast({
+          title: "Connection deleted",
+          description: "The connection has been removed.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to delete connection";
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
+      } finally {
+        setDeletingConnection(null);
+      }
     }
   };
 
-  const getDisplayName = (connection: S3Connection) => {
+  const getDisplayName = (connection: ConnectionResponse) => {
     return connection.name || connection.endpoint;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (connections.length === 0) {
     return (
@@ -214,7 +245,14 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
             <Button variant="outline" onClick={() => setDeletingConnection(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteConnection.isPending}
+            >
+              {deleteConnection.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Delete
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DeleteBucketCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import type { S3Connection } from "@/types";
+import { getConnectionById } from "@/lib/db/connections";
 
 export async function DELETE(
   request: NextRequest,
@@ -9,12 +9,20 @@ export async function DELETE(
 ) {
   try {
     const { bucket } = await params;
-    const { connection }: { connection: S3Connection } = await request.json();
+    const { connectionId }: { connectionId: string } = await request.json();
 
-    if (!connection || !bucket) {
+    if (!connectionId || !bucket) {
       return NextResponse.json(
-        { error: "Connection and bucket name are required" },
+        { error: "connectionId and bucket name are required" },
         { status: 400 }
+      );
+    }
+
+    const connection = await getConnectionById(connectionId);
+    if (!connection) {
+      return NextResponse.json(
+        { error: "Connection not found" },
+        { status: 404 }
       );
     }
 

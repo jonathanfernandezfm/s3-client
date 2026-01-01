@@ -12,12 +12,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useConnectionStore } from "@/lib/stores/connection-store";
+import {
+  useCreateConnection,
+  useUpdateConnection,
+  type ConnectionResponse,
+  type ConnectionInput,
+} from "@/lib/queries/connections";
 import { toast } from "@/hooks/use-toast";
-import type { S3Connection } from "@/types";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 interface ConnectionFormProps {
-  connection?: S3Connection;
+  connection?: ConnectionResponse;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -27,8 +32,11 @@ export function ConnectionForm({
   onSuccess,
   onCancel,
 }: ConnectionFormProps) {
-  const { addConnection, updateConnection, setStatus } = useConnectionStore();
-  const [formData, setFormData] = useState<Omit<S3Connection, "id">>({
+  const { setStatus } = useConnectionStore();
+  const createConnection = useCreateConnection();
+  const updateConnection = useUpdateConnection();
+
+  const [formData, setFormData] = useState<ConnectionInput>({
     name: connection?.name || "",
     endpoint: connection?.endpoint || "",
     accessKeyId: connection?.accessKeyId || "",
@@ -43,6 +51,7 @@ export function ConnectionForm({
   } | null>(null);
 
   const isEditMode = !!connection;
+  const isSaving = createConnection.isPending || updateConnection.isPending;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -95,30 +104,38 @@ export function ConnectionForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isEditMode) {
-      updateConnection(connection.id, formData);
-      toast({
-        title: "Connection updated",
-        description: "Connection settings have been saved.",
-      });
-    } else {
-      const newConnection: S3Connection = {
-        id: crypto.randomUUID(),
-        ...formData,
-      };
-      addConnection(newConnection);
+    try {
+      if (isEditMode) {
+        await updateConnection.mutateAsync({
+          id: connection.id,
+          data: formData,
+        });
+        toast({
+          title: "Connection updated",
+          description: "Connection settings have been saved.",
+        });
+      } else {
+        const newConnection = await createConnection.mutateAsync(formData);
 
-      if (testResult?.success) {
-        setStatus(newConnection.id, { connected: true, testedAt: new Date() });
+        if (testResult?.success) {
+          setStatus(newConnection.id, { connected: true, testedAt: new Date() });
+        }
+
+        toast({
+          title: "Connection added",
+          description: "New connection has been saved.",
+        });
       }
 
+      onSuccess?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save connection";
       toast({
-        title: "Connection added",
-        description: "New connection has been saved.",
+        title: "Error",
+        description: message,
+        variant: "destructive",
       });
     }
-
-    onSuccess?.();
   };
 
   return (
@@ -141,6 +158,7 @@ export function ConnectionForm({
               placeholder="My S3 Server"
               value={formData.name}
               onChange={handleChange}
+              tabIndex={1}
             />
           </div>
 
@@ -153,6 +171,7 @@ export function ConnectionForm({
               value={formData.endpoint}
               onChange={handleChange}
               required
+              tabIndex={1}
             />
           </div>
 
@@ -165,6 +184,7 @@ export function ConnectionForm({
               value={formData.region}
               onChange={handleChange}
               required
+              tabIndex={1}
             />
           </div>
 
@@ -177,6 +197,7 @@ export function ConnectionForm({
               value={formData.accessKeyId}
               onChange={handleChange}
               required
+              tabIndex={1}
             />
           </div>
 
@@ -189,8 +210,14 @@ export function ConnectionForm({
               placeholder="••••••••••••••••"
               value={formData.secretAccessKey}
               onChange={handleChange}
-              required
+              required={!isEditMode}
+              tabIndex={1}
             />
+            {isEditMode && (
+              <p className="text-xs text-muted-foreground">
+                Leave blank to keep the existing secret key
+              </p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
@@ -212,7 +239,7 @@ export function ConnectionForm({
               type="button"
               variant="outline"
               onClick={testConnection}
-              disabled={testing}
+              disabled={testing || isSaving}
             >
               {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Test Connection
@@ -235,11 +262,12 @@ export function ConnectionForm({
 
           <div className="flex gap-2 pt-4">
             {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
                 Cancel
               </Button>
             )}
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditMode ? "Save Changes" : "Add Connection"}
             </Button>
           </div>

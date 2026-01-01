@@ -4,16 +4,24 @@ import {
   CreateBucketCommand,
 } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import type { S3Connection } from "@/types";
+import { getConnectionById } from "@/lib/db/connections";
 
 export async function POST(request: NextRequest) {
   try {
-    const { connection }: { connection: S3Connection } = await request.json();
+    const { connectionId }: { connectionId: string } = await request.json();
 
+    if (!connectionId) {
+      return NextResponse.json(
+        { error: "No connectionId provided" },
+        { status: 400 }
+      );
+    }
+
+    const connection = await getConnectionById(connectionId);
     if (!connection) {
       return NextResponse.json(
-        { error: "No connection provided" },
-        { status: 400 }
+        { error: "Connection not found" },
+        { status: 404 }
       );
     }
 
@@ -35,13 +43,21 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { connection, name }: { connection: S3Connection; name: string } =
+    const { connectionId, name }: { connectionId: string; name: string } =
       await request.json();
 
-    if (!connection || !name) {
+    if (!connectionId || !name) {
       return NextResponse.json(
-        { error: "Connection and bucket name are required" },
+        { error: "connectionId and bucket name are required" },
         { status: 400 }
+      );
+    }
+
+    const connection = await getConnectionById(connectionId);
+    if (!connection) {
+      return NextResponse.json(
+        { error: "Connection not found" },
+        { status: 404 }
       );
     }
 

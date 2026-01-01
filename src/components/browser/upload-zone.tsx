@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useUploadStore, type UploadItem } from "@/lib/stores/upload-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queries/keys";
@@ -23,22 +22,11 @@ export function UploadZone({
   currentPath,
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const { getConnection } = useConnectionStore();
   const { uploads, addUpload, updateUpload, removeUpload } = useUploadStore();
   const queryClient = useQueryClient();
 
   const uploadFile = useCallback(
     async (file: File) => {
-      const connection = getConnection(connectionId);
-      if (!connection) {
-        toast({
-          title: "Upload failed",
-          description: "Connection not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const id = crypto.randomUUID();
       const key = currentPath + file.name;
 
@@ -50,7 +38,7 @@ export function UploadZone({
         formData.append("file", file);
         formData.append("bucket", bucket);
         formData.append("key", key);
-        formData.append("connection", JSON.stringify(connection));
+        formData.append("connectionId", connectionId);
 
         const response = await fetch("/api/objects/upload", {
           method: "POST",
@@ -85,7 +73,6 @@ export function UploadZone({
       connectionId,
       bucket,
       currentPath,
-      getConnection,
       addUpload,
       updateUpload,
       queryClient,

@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import type { S3Connection } from "@/types";
+import { getConnectionById } from "@/lib/db/connections";
 
 export async function POST(request: NextRequest) {
   try {
     const {
-      connection,
+      connectionId,
       bucket,
       keys,
-    }: { connection: S3Connection; bucket: string; keys: string[] } =
+    }: { connectionId: string; bucket: string; keys: string[] } =
       await request.json();
 
-    if (!connection || !bucket || !keys || keys.length === 0) {
+    if (!connectionId || !bucket || !keys || keys.length === 0) {
       return NextResponse.json(
-        { error: "Connection, bucket, and keys are required" },
+        { error: "connectionId, bucket, and keys are required" },
         { status: 400 }
+      );
+    }
+
+    const connection = await getConnectionById(connectionId);
+    if (!connection) {
+      return NextResponse.json(
+        { error: "Connection not found" },
+        { status: 404 }
       );
     }
 

@@ -1,10 +1,12 @@
 "use client";
 
 import { useConnectionStore } from "@/lib/stores/connection-store";
+import { useConnections } from "@/lib/queries/connections";
 import { ThemeToggle } from "./theme-toggle";
 
 export function Header() {
-  const { connections, statuses } = useConnectionStore();
+  const { data: connections = [] } = useConnections();
+  const { statuses } = useConnectionStore();
 
   const connectedConnections = connections.filter(
     (conn) => statuses[conn.id]?.connected

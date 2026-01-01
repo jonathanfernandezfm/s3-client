@@ -23,10 +23,9 @@ interface FileBrowserProps {
 }
 
 export function FileBrowser({ connectionId, bucket, path = [] }: FileBrowserProps) {
-  const { statuses, getConnection } = useConnectionStore();
+  const { statuses } = useConnectionStore();
   const { selectedItems, clearSelection } = useBrowserStore();
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";
-  const connection = getConnection(connectionId);
   const status = statuses[connectionId];
 
   const { data, isLoading, error, refetch } = useObjects(
@@ -39,7 +38,7 @@ export function FileBrowser({ connectionId, bucket, path = [] }: FileBrowserProp
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [previewObject, setPreviewObject] = useState<S3Object | null>(null);
 
-  if (!connection || !status?.connected) {
+  if (!status?.connected) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <CloudOff className="h-12 w-12 text-muted-foreground mb-4" />
@@ -123,7 +122,7 @@ export function FileBrowser({ connectionId, bucket, path = [] }: FileBrowserProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          connection,
+          connectionId,
           bucket,
           key,
         }),

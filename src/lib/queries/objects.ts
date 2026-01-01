@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { queryKeys } from "./keys";
-import type { S3Object, S3Connection } from "@/types";
+import type { S3Object } from "@/types";
 
 interface ListObjectsResponse {
   objects: S3Object[];
@@ -12,14 +12,14 @@ interface ListObjectsResponse {
 }
 
 async function fetchObjects(
-  connection: S3Connection,
+  connectionId: string,
   bucket: string,
   prefix: string
 ): Promise<ListObjectsResponse> {
   const response = await fetch("/api/objects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection, bucket, prefix }),
+    body: JSON.stringify({ connectionId, bucket, prefix }),
   });
 
   if (!response.ok) {
@@ -31,14 +31,14 @@ async function fetchObjects(
 }
 
 async function deleteObjects(
-  connection: S3Connection,
+  connectionId: string,
   bucket: string,
   keys: string[]
 ): Promise<{ success: boolean }> {
   const response = await fetch("/api/objects/delete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection, bucket, keys }),
+    body: JSON.stringify({ connectionId, bucket, keys }),
   });
 
   if (!response.ok) {
@@ -50,14 +50,14 @@ async function deleteObjects(
 }
 
 async function createFolder(
-  connection: S3Connection,
+  connectionId: string,
   bucket: string,
   path: string
 ): Promise<{ success: boolean }> {
   const response = await fetch("/api/objects/folder", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection, bucket, path }),
+    body: JSON.stringify({ connectionId, bucket, path }),
   });
 
   if (!response.ok) {
@@ -73,27 +73,21 @@ export function useObjects(
   bucket: string,
   prefix: string = ""
 ) {
-  const { getConnection, statuses } = useConnectionStore();
-  const connection = getConnection(connectionId);
+  const { statuses } = useConnectionStore();
   const status = statuses[connectionId];
 
   return useQuery({
     queryKey: queryKeys.objects.list(connectionId, bucket, prefix),
-    queryFn: () => fetchObjects(connection!, bucket, prefix),
-    enabled: !!connection && status?.connected && !!bucket,
+    queryFn: () => fetchObjects(connectionId, bucket, prefix),
+    enabled: !!connectionId && status?.connected && !!bucket,
   });
 }
 
 export function useDeleteObjects(connectionId: string, bucket: string) {
   const queryClient = useQueryClient();
-  const { getConnection } = useConnectionStore();
 
   return useMutation({
-    mutationFn: (keys: string[]) => {
-      const connection = getConnection(connectionId);
-      if (!connection) throw new Error("Connection not found");
-      return deleteObjects(connection, bucket, keys);
-    },
+    mutationFn: (keys: string[]) => deleteObjects(connectionId, bucket, keys),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
     },
@@ -102,14 +96,9 @@ export function useDeleteObjects(connectionId: string, bucket: string) {
 
 export function useCreateFolder(connectionId: string, bucket: string) {
   const queryClient = useQueryClient();
-  const { getConnection } = useConnectionStore();
 
   return useMutation({
-    mutationFn: (path: string) => {
-      const connection = getConnection(connectionId);
-      if (!connection) throw new Error("Connection not found");
-      return createFolder(connection, bucket, path);
-    },
+    mutationFn: (path: string) => createFolder(connectionId, bucket, path),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
     },

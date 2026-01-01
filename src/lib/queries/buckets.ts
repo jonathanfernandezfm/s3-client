@@ -2,14 +2,15 @@
 
 import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
 import { useConnectionStore } from "@/lib/stores/connection-store";
+import { useConnections, type ConnectionResponse } from "./connections";
 import { queryKeys } from "./keys";
-import type { S3Bucket, S3Connection } from "@/types";
+import type { S3Bucket } from "@/types";
 
-async function fetchBuckets(connection: S3Connection): Promise<S3Bucket[]> {
+async function fetchBuckets(connectionId: string): Promise<S3Bucket[]> {
   const response = await fetch("/api/buckets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection }),
+    body: JSON.stringify({ connectionId }),
   });
 
   if (!response.ok) {
@@ -20,18 +21,18 @@ async function fetchBuckets(connection: S3Connection): Promise<S3Bucket[]> {
   const buckets = await response.json();
   return buckets.map((bucket: Omit<S3Bucket, "connectionId">) => ({
     ...bucket,
-    connectionId: connection.id,
+    connectionId,
   }));
 }
 
 async function createBucket(
-  connection: S3Connection,
+  connectionId: string,
   name: string
 ): Promise<{ success: boolean }> {
   const response = await fetch("/api/buckets", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection, name }),
+    body: JSON.stringify({ connectionId, name }),
   });
 
   if (!response.ok) {
@@ -43,13 +44,13 @@ async function createBucket(
 }
 
 async function deleteBucket(
-  connection: S3Connection,
+  connectionId: string,
   name: string
 ): Promise<{ success: boolean }> {
   const response = await fetch(`/api/buckets/${encodeURIComponent(name)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connection }),
+    body: JSON.stringify({ connectionId }),
   });
 
   if (!response.ok) {
@@ -61,19 +62,18 @@ async function deleteBucket(
 }
 
 export function useBuckets(connectionId: string) {
-  const { getConnection, statuses } = useConnectionStore();
-  const connection = getConnection(connectionId);
+  const { statuses } = useConnectionStore();
   const status = statuses[connectionId];
 
   return useQuery({
     queryKey: queryKeys.buckets.byConnection(connectionId),
-    queryFn: () => fetchBuckets(connection!),
-    enabled: !!connection && status?.connected,
+    queryFn: () => fetchBuckets(connectionId),
+    enabled: !!connectionId && status?.connected,
   });
 }
 
 export interface BucketGroup {
-  connection: S3Connection;
+  connection: ConnectionResponse;
   buckets: S3Bucket[];
   isLoading: boolean;
   error: Error | null;
@@ -84,7 +84,8 @@ export function useAllBuckets(): {
   isLoading: boolean;
   hasAnyConnected: boolean;
 } {
-  const { connections, statuses } = useConnectionStore();
+  const { data: connections = [] } = useConnections();
+  const { statuses } = useConnectionStore();
 
   const connectedConnections = connections.filter(
     (conn) => statuses[conn.id]?.connected
@@ -93,7 +94,7 @@ export function useAllBuckets(): {
   const queries = useQueries({
     queries: connectedConnections.map((connection) => ({
       queryKey: queryKeys.buckets.byConnection(connection.id),
-      queryFn: () => fetchBuckets(connection),
+      queryFn: () => fetchBuckets(connection.id),
       enabled: true,
     })),
   });
@@ -113,14 +114,9 @@ export function useAllBuckets(): {
 
 export function useCreateBucket(connectionId: string) {
   const queryClient = useQueryClient();
-  const { getConnection } = useConnectionStore();
 
   return useMutation({
-    mutationFn: (name: string) => {
-      const connection = getConnection(connectionId);
-      if (!connection) throw new Error("Connection not found");
-      return createBucket(connection, name);
-    },
+    mutationFn: (name: string) => createBucket(connectionId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.buckets.all });
     },
@@ -129,14 +125,9 @@ export function useCreateBucket(connectionId: string) {
 
 export function useDeleteBucket(connectionId: string) {
   const queryClient = useQueryClient();
-  const { getConnection } = useConnectionStore();
 
   return useMutation({
-    mutationFn: (name: string) => {
-      const connection = getConnection(connectionId);
-      if (!connection) throw new Error("Connection not found");
-      return deleteBucket(connection, name);
-    },
+    mutationFn: (name: string) => deleteBucket(connectionId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.buckets.all });
     },

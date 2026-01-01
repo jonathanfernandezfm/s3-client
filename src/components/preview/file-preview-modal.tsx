@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useConnectionStore } from "@/lib/stores/connection-store";
 import { Download, Loader2, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { S3Object } from "@/types";
 
@@ -29,7 +28,6 @@ export function FilePreviewModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const { getConnection } = useConnectionStore();
 
   useEffect(() => {
     if (!object || object.isFolder) {
@@ -41,19 +39,12 @@ export function FilePreviewModal({
       setLoading(true);
       setError(null);
 
-      const connection = getConnection(connectionId);
-      if (!connection) {
-        setError("Connection not found");
-        setLoading(false);
-        return;
-      }
-
       try {
         const response = await fetch("/api/objects/download", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            connection,
+            connectionId,
             bucket,
             key: object.key,
           }),
@@ -74,7 +65,7 @@ export function FilePreviewModal({
 
     loadImage();
     setZoom(1);
-  }, [object, bucket, connectionId, getConnection]);
+  }, [object, bucket, connectionId]);
 
   const handleDownload = () => {
     if (imageUrl) {
