@@ -4,7 +4,7 @@ import {
   CreateBucketCommand,
 } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import type { S3Connection, S3Bucket } from "@/types";
+import type { S3Connection } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const command = new ListBucketsCommand({});
     const response = await client.send(command);
 
-    const buckets: S3Bucket[] = (response.Buckets || []).map((bucket) => ({
+    const buckets = (response.Buckets || []).map((bucket) => ({
       name: bucket.Name || "",
       creationDate: bucket.CreationDate,
     }));

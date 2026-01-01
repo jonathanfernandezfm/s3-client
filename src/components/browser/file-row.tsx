@@ -26,6 +26,7 @@ import type { S3Object } from "@/types";
 
 interface FileRowProps {
   object: S3Object;
+  connectionId: string;
   bucket: string;
   currentPath: string;
   isSelected: boolean;
@@ -56,6 +57,7 @@ function getFileName(key: string, prefix: string) {
 
 export function FileRow({
   object,
+  connectionId,
   bucket,
   currentPath,
   isSelected,
@@ -69,7 +71,7 @@ export function FileRow({
   const canPreview = isImageFile(object.key);
 
   const href = object.isFolder
-    ? `/browser/${bucket}/${object.key}`
+    ? `/browser/${connectionId}/${bucket}/${object.key}`
     : undefined;
 
   return (

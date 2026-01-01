@@ -17,10 +17,14 @@ import { useCreateBucket } from "@/lib/queries/buckets";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 
-export function CreateBucketDialog() {
+interface CreateBucketDialogProps {
+  connectionId: string;
+}
+
+export function CreateBucketDialog({ connectionId }: CreateBucketDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const createBucket = useCreateBucket();
+  const createBucket = useCreateBucket(connectionId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +51,7 @@ export function CreateBucketDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button size="sm" variant="outline">
           <Plus className="mr-2 h-4 w-4" />
           Create Bucket
         </Button>

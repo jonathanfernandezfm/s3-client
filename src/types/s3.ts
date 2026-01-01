@@ -1,6 +1,7 @@
 export interface S3Bucket {
   name: string;
   creationDate?: Date;
+  connectionId: string;
 }
 
 export interface S3Object {

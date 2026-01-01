@@ -15,17 +15,19 @@ import { Loader2 } from "lucide-react";
 
 interface DeleteBucketDialogProps {
   bucketName: string | null;
+  connectionId: string | null;
   onClose: () => void;
 }
 
 export function DeleteBucketDialog({
   bucketName,
+  connectionId,
   onClose,
 }: DeleteBucketDialogProps) {
-  const deleteBucket = useDeleteBucket();
+  const deleteBucket = useDeleteBucket(connectionId || "");
 
   const handleDelete = async () => {
-    if (!bucketName) return;
+    if (!bucketName || !connectionId) return;
 
     try {
       await deleteBucket.mutateAsync(bucketName);
@@ -44,7 +46,7 @@ export function DeleteBucketDialog({
   };
 
   return (
-    <Dialog open={!!bucketName} onOpenChange={() => onClose()}>
+    <Dialog open={!!bucketName && !!connectionId} onOpenChange={() => onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete Bucket</DialogTitle>

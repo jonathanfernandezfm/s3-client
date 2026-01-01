@@ -17,31 +17,38 @@ import Link from "next/link";
 import type { S3Object } from "@/types";
 
 interface FileBrowserProps {
+  connectionId: string;
   bucket: string;
   path?: string[];
 }
 
-export function FileBrowser({ bucket, path = [] }: FileBrowserProps) {
-  const { status } = useConnectionStore();
+export function FileBrowser({ connectionId, bucket, path = [] }: FileBrowserProps) {
+  const { statuses, getConnection } = useConnectionStore();
   const { selectedItems, clearSelection } = useBrowserStore();
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";
+  const connection = getConnection(connectionId);
+  const status = statuses[connectionId];
 
-  const { data, isLoading, error, refetch } = useObjects(bucket, currentPath);
-  const deleteObjects = useDeleteObjects(bucket);
+  const { data, isLoading, error, refetch } = useObjects(
+    connectionId,
+    bucket,
+    currentPath
+  );
+  const deleteObjects = useDeleteObjects(connectionId, bucket);
 
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [previewObject, setPreviewObject] = useState<S3Object | null>(null);
 
-  if (!status.connected) {
+  if (!connection || !status?.connected) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <CloudOff className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold">No Connection</h3>
+        <h3 className="text-lg font-semibold">Connection Not Available</h3>
         <p className="text-muted-foreground mb-4">
-          Connect to an S3 endpoint to browse files
+          The connection is not active or has been removed
         </p>
         <Button asChild>
-          <Link href="/settings/connections">Configure Connection</Link>
+          <Link href="/settings/connections">Configure Connections</Link>
         </Button>
       </div>
     );
@@ -116,7 +123,7 @@ export function FileBrowser({ bucket, path = [] }: FileBrowserProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          connection: useConnectionStore.getState().connection,
+          connection,
           bucket,
           key,
         }),
@@ -140,7 +147,11 @@ export function FileBrowser({ bucket, path = [] }: FileBrowserProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Breadcrumb bucket={bucket} path={currentPath} />
+        <Breadcrumb
+          connectionId={connectionId}
+          bucket={bucket}
+          path={currentPath}
+        />
         <div className="flex items-center gap-2">
           {selectedItems.size > 0 && (
             <Button
@@ -153,17 +164,26 @@ export function FileBrowser({ bucket, path = [] }: FileBrowserProps) {
               Delete ({selectedItems.size})
             </Button>
           )}
-          <CreateFolderDialog bucket={bucket} currentPath={currentPath} />
+          <CreateFolderDialog
+            connectionId={connectionId}
+            bucket={bucket}
+            currentPath={currentPath}
+          />
           <Button variant="outline" size="icon" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <UploadZone bucket={bucket} currentPath={currentPath} />
+      <UploadZone
+        connectionId={connectionId}
+        bucket={bucket}
+        currentPath={currentPath}
+      />
 
       <FileList
         objects={data?.objects || []}
+        connectionId={connectionId}
         bucket={bucket}
         currentPath={currentPath}
         onDelete={handleDelete}
@@ -181,6 +201,7 @@ export function FileBrowser({ bucket, path = [] }: FileBrowserProps) {
 
       <FilePreviewModal
         object={previewObject}
+        connectionId={connectionId}
         bucket={bucket}
         onClose={() => setPreviewObject(null)}
       />

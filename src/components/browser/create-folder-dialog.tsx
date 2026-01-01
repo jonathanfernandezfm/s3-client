@@ -18,17 +18,19 @@ import { toast } from "@/hooks/use-toast";
 import { FolderPlus, Loader2 } from "lucide-react";
 
 interface CreateFolderDialogProps {
+  connectionId: string;
   bucket: string;
   currentPath: string;
 }
 
 export function CreateFolderDialog({
+  connectionId,
   bucket,
   currentPath,
 }: CreateFolderDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const createFolder = useCreateFolder(bucket);
+  const createFolder = useCreateFolder(connectionId, bucket);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

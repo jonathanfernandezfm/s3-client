@@ -12,18 +12,33 @@ import { Upload, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UploadZoneProps {
+  connectionId: string;
   bucket: string;
   currentPath: string;
 }
 
-export function UploadZone({ bucket, currentPath }: UploadZoneProps) {
+export function UploadZone({
+  connectionId,
+  bucket,
+  currentPath,
+}: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const { connection } = useConnectionStore();
+  const { getConnection } = useConnectionStore();
   const { uploads, addUpload, updateUpload, removeUpload } = useUploadStore();
   const queryClient = useQueryClient();
 
   const uploadFile = useCallback(
     async (file: File) => {
+      const connection = getConnection(connectionId);
+      if (!connection) {
+        toast({
+          title: "Upload failed",
+          description: "Connection not found",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const id = crypto.randomUUID();
       const key = currentPath + file.name;
 
@@ -49,7 +64,7 @@ export function UploadZone({ bucket, currentPath }: UploadZoneProps) {
 
         updateUpload(id, { status: "completed", progress: 100 });
         queryClient.invalidateQueries({
-          queryKey: queryKeys.objects.list(bucket, currentPath),
+          queryKey: queryKeys.objects.list(connectionId, bucket, currentPath),
         });
 
         toast({
@@ -66,7 +81,15 @@ export function UploadZone({ bucket, currentPath }: UploadZoneProps) {
         });
       }
     },
-    [bucket, currentPath, connection, addUpload, updateUpload, queryClient]
+    [
+      connectionId,
+      bucket,
+      currentPath,
+      getConnection,
+      addUpload,
+      updateUpload,
+      queryClient,
+    ]
   );
 
   const handleDrop = useCallback(
@@ -136,7 +159,7 @@ export function UploadZone({ bucket, currentPath }: UploadZoneProps) {
       {activeUploads.length > 0 && (
         <div className="space-y-2">
           {activeUploads.map((upload) => (
-            <UploadItem
+            <UploadItemComponent
               key={upload.id}
               upload={upload}
               onRemove={() => removeUpload(upload.id)}
@@ -148,7 +171,7 @@ export function UploadZone({ bucket, currentPath }: UploadZoneProps) {
   );
 }
 
-function UploadItem({
+function UploadItemComponent({
   upload,
   onRemove,
 }: {

@@ -13,6 +13,7 @@ import type { S3Object } from "@/types";
 
 interface FileListProps {
   objects: S3Object[];
+  connectionId: string;
   bucket: string;
   currentPath: string;
   onDelete: (key: string) => void;
@@ -22,6 +23,7 @@ interface FileListProps {
 
 export function FileList({
   objects,
+  connectionId,
   bucket,
   currentPath,
   onDelete,
@@ -73,6 +75,7 @@ export function FileList({
           <FileRow
             key={object.key}
             object={object}
+            connectionId={connectionId}
             bucket={bucket}
             currentPath={currentPath}
             isSelected={selectedItems.has(object.key)}

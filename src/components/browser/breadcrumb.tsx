@@ -4,22 +4,23 @@ import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 
 interface BreadcrumbProps {
+  connectionId: string;
   bucket: string;
   path: string;
 }
 
-export function Breadcrumb({ bucket, path }: BreadcrumbProps) {
+export function Breadcrumb({ connectionId, bucket, path }: BreadcrumbProps) {
   const parts = path.split("/").filter(Boolean);
 
   const buildPath = (index: number) => {
     const pathParts = parts.slice(0, index + 1);
-    return `/browser/${bucket}/${pathParts.join("/")}`;
+    return `/browser/${connectionId}/${bucket}/${pathParts.join("/")}`;
   };
 
   return (
     <nav className="flex items-center space-x-1 text-sm">
       <Link
-        href={`/browser/${bucket}`}
+        href={`/browser/${connectionId}/${bucket}`}
         className="flex items-center hover:text-foreground text-muted-foreground"
       >
         <Home className="h-4 w-4" />
@@ -28,7 +29,7 @@ export function Breadcrumb({ bucket, path }: BreadcrumbProps) {
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
 
       <Link
-        href={`/browser/${bucket}`}
+        href={`/browser/${connectionId}/${bucket}`}
         className={`hover:text-foreground ${
           parts.length === 0 ? "font-medium" : "text-muted-foreground"
         }`}

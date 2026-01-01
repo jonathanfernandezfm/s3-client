@@ -14,12 +14,14 @@ import type { S3Object } from "@/types";
 
 interface FilePreviewModalProps {
   object: S3Object | null;
+  connectionId: string;
   bucket: string;
   onClose: () => void;
 }
 
 export function FilePreviewModal({
   object,
+  connectionId,
   bucket,
   onClose,
 }: FilePreviewModalProps) {
@@ -27,7 +29,7 @@ export function FilePreviewModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const { connection } = useConnectionStore();
+  const { getConnection } = useConnectionStore();
 
   useEffect(() => {
     if (!object || object.isFolder) {
@@ -38,6 +40,13 @@ export function FilePreviewModal({
     const loadImage = async () => {
       setLoading(true);
       setError(null);
+
+      const connection = getConnection(connectionId);
+      if (!connection) {
+        setError("Connection not found");
+        setLoading(false);
+        return;
+      }
 
       try {
         const response = await fetch("/api/objects/download", {
@@ -65,7 +74,7 @@ export function FilePreviewModal({
 
     loadImage();
     setZoom(1);
-  }, [object, bucket, connection]);
+  }, [object, bucket, connectionId, getConnection]);
 
   const handleDownload = () => {
     if (imageUrl) {

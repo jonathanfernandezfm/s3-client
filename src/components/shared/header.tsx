@@ -2,36 +2,31 @@
 
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { ThemeToggle } from "./theme-toggle";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
 
 export function Header() {
-  const { connection, status, clearConnection } = useConnectionStore();
+  const { connections, statuses } = useConnectionStore();
+
+  const connectedConnections = connections.filter(
+    (conn) => statuses[conn.id]?.connected
+  );
 
   return (
     <header className="h-14 border-b bg-background flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
-        {status.connected && connection && (
+        {connectedConnections.length > 0 && (
           <div className="text-sm">
-            <span className="text-muted-foreground">Endpoint: </span>
-            <span className="font-medium">{connection.endpoint}</span>
+            <span className="text-muted-foreground">Connected to: </span>
+            <span className="font-medium">
+              {connectedConnections
+                .map((c) => c.name || c.endpoint)
+                .join(", ")}
+            </span>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        {status.connected && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearConnection}
-            className="text-muted-foreground"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Disconnect
-          </Button>
-        )}
       </div>
     </header>
   );
