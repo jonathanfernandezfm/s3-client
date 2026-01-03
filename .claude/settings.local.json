@@ -10,7 +10,10 @@
       "Bash(pnpm run build:*)",
       "Bash(tree:*)",
       "Bash(pnpm prisma generate:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(npx next lint:*)",
+      "Bash(timeout 15 pnpm dev:*)"
     ]
   }
 }

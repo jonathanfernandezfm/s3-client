@@ -1,12 +1,22 @@
 "use client";
 
-import { useTabStore, Tab } from "@/lib/stores/tab-store";
+import { useLayoutStore, Tab } from "@/lib/stores/layout-store";
 import { Button } from "@/components/ui/button";
-import { X, Plus, FolderOpen, Database } from "lucide-react";
+import { X, Plus, FolderOpen, Database, PanelRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
-  const { setActiveTab, removeTab, tabs } = useTabStore();
+interface TabItemProps {
+  tab: Tab;
+  isActive: boolean;
+  paneId: string;
+}
+
+function TabItem({ tab, isActive, paneId }: TabItemProps) {
+  const { setActiveTab, removeTab, panes } = useLayoutStore();
+
+  const pane = panes[paneId];
+  const tabCount = pane?.tabs.length || 0;
+  const paneCount = Object.keys(panes).length;
 
   const getTabLabel = () => {
     if (tab.type === "buckets") {
@@ -34,24 +44,24 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
           ? "bg-background shadow-sm border border-b-0 border-border"
           : "bg-muted/40 hover:bg-muted/70"
       )}
-      onClick={() => setActiveTab(tab.id)}
+      onClick={() => setActiveTab(paneId, tab.id)}
     >
       {isActive && (
         <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
       )}
-      <span className="text-muted-foreground flex-shrink-0">{getTabIcon()}</span>
+      <span className="text-muted-foreground shrink-0">{getTabIcon()}</span>
       <span className="text-sm truncate flex-1" title={getTabLabel()}>
         {getTabLabel()}
       </span>
-      {tabs.length > 1 && (
+      {(tabCount > 1 || paneCount > 1) && (
         <button
           className={cn(
-            "p-1 rounded-md hover:bg-accent transition-opacity flex-shrink-0",
+            "p-1 rounded-md hover:bg-accent transition-opacity shrink-0",
             isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}
           onClick={(e) => {
             e.stopPropagation();
-            removeTab(tab.id);
+            removeTab(paneId, tab.id);
           }}
         >
           <X className="h-3.5 w-3.5" />
@@ -61,18 +71,37 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
   );
 }
 
-export function TabBar() {
-  const { tabs, activeTabId, addTab } = useTabStore();
+interface TabBarProps {
+  paneId: string;
+}
+
+export function TabBar({ paneId }: TabBarProps) {
+  const { panes, grid, addTab, addPane, setFocusedPane } = useLayoutStore();
+  const pane = panes[paneId];
+
+  if (!pane) return null;
+
+  const canSplitRight = grid.columns < 3;
 
   const handleAddTab = () => {
-    addTab({ type: "buckets", path: "" });
+    addTab(paneId, { type: "buckets", path: "" });
+  };
+
+  const handleSplitRight = () => {
+    setFocusedPane(paneId);
+    addPane("right");
   };
 
   return (
     <div className="flex items-end border-b bg-muted/20 px-2">
-      <div className="flex items-end overflow-x-auto">
-        {tabs.map((tab) => (
-          <TabItem key={tab.id} tab={tab} isActive={tab.id === activeTabId} />
+      <div className="flex items-end overflow-x-auto flex-1">
+        {pane.tabs.map((tab) => (
+          <TabItem
+            key={tab.id}
+            tab={tab}
+            isActive={tab.id === pane.activeTabId}
+            paneId={paneId}
+          />
         ))}
         <Button
           variant="ghost"
@@ -82,6 +111,18 @@ export function TabBar() {
           title="New tab"
         >
           <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-1 mb-1 ml-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleSplitRight}
+          disabled={!canSplitRight}
+          title="Split right"
+        >
+          <PanelRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

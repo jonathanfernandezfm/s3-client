@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useTabStore } from "@/lib/stores/tab-store";
+import { useLayoutStore } from "@/lib/stores/layout-store";
 import { useConnections } from "@/lib/queries/connections";
 import { Loader2 } from "lucide-react";
 
@@ -14,7 +14,7 @@ interface BrowserRedirectProps {
 
 export function BrowserRedirect({ connectionId, bucket, path = [] }: BrowserRedirectProps) {
   const router = useRouter();
-  const { addTab, tabs, setActiveTab } = useTabStore();
+  const { panes, focusedPaneId, addTab, setActiveTab, updateTabPath } = useLayoutStore();
   const { data: connections } = useConnections();
 
   useEffect(() => {
@@ -22,32 +22,43 @@ export function BrowserRedirect({ connectionId, bucket, path = [] }: BrowserRedi
     const connection = connections?.find((c) => c.id === connectionId);
     const connectionName = connection?.name || connection?.endpoint || "";
 
-    // Check if a tab already exists for this bucket
-    const existingTab = tabs.find(
-      (t) =>
-        t.type === "browser" &&
-        t.connectionId === connectionId &&
-        t.bucket === bucket
-    );
+    // Find an existing tab for this bucket across all panes
+    let existingTabInfo: { paneId: string; tabId: string } | null = null;
 
-    if (existingTab) {
+    for (const [paneId, pane] of Object.entries(panes)) {
+      const existingTab = pane.tabs.find(
+        (t) =>
+          t.type === "browser" &&
+          t.connectionId === connectionId &&
+          t.bucket === bucket
+      );
+      if (existingTab) {
+        existingTabInfo = { paneId, tabId: existingTab.id };
+        break;
+      }
+    }
+
+    if (existingTabInfo) {
       // Update the path of the existing tab and switch to it
-      useTabStore.getState().updateTabPath(existingTab.id, pathString);
-      setActiveTab(existingTab.id);
+      updateTabPath(existingTabInfo.paneId, existingTabInfo.tabId, pathString);
+      setActiveTab(existingTabInfo.paneId, existingTabInfo.tabId);
     } else {
-      // Add a new tab
-      addTab({
-        type: "browser",
-        connectionId,
-        connectionName,
-        bucket,
-        path: pathString,
-      });
+      // Add a new tab to the focused pane
+      const targetPaneId = focusedPaneId || Object.keys(panes)[0];
+      if (targetPaneId) {
+        addTab(targetPaneId, {
+          type: "browser",
+          connectionId,
+          connectionName,
+          bucket,
+          path: pathString,
+        });
+      }
     }
 
     // Redirect to buckets page where tabs are displayed
     router.replace("/buckets");
-  }, [connectionId, bucket, path, connections, addTab, tabs, setActiveTab, router]);
+  }, [connectionId, bucket, path, connections, panes, focusedPaneId, addTab, setActiveTab, updateTabPath, router]);
 
   return (
     <div className="flex items-center justify-center py-12">

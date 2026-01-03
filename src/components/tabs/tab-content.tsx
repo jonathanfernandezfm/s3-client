@@ -1,23 +1,31 @@
 "use client";
 
-import { useTabStore } from "@/lib/stores/tab-store";
+import { useLayoutStore } from "@/lib/stores/layout-store";
 import { BucketList } from "@/components/buckets/bucket-list";
 import { FileBrowser } from "@/components/browser/file-browser";
 
-export function TabContent() {
-  const { tabs, activeTabId, updateTabPath, updateTabBucket, resetTabToBuckets } = useTabStore();
-  const activeTab = tabs.find((t) => t.id === activeTabId);
+interface TabContentProps {
+  paneId: string;
+}
+
+export function TabContent({ paneId }: TabContentProps) {
+  const { panes, updateTabPath, updateTabBucket, resetTabToBuckets } = useLayoutStore();
+  const pane = panes[paneId];
+
+  if (!pane) return null;
+
+  const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId);
 
   if (!activeTab) {
     return null;
   }
 
   const handleOpenBucket = (connectionId: string, connectionName: string, bucketName: string) => {
-    updateTabBucket(activeTab.id, connectionId, connectionName, bucketName);
+    updateTabBucket(paneId, activeTab.id, connectionId, connectionName, bucketName);
   };
 
   const handleGoHome = () => {
-    resetTabToBuckets(activeTab.id);
+    resetTabToBuckets(paneId, activeTab.id);
   };
 
   if (activeTab.type === "buckets") {
@@ -48,7 +56,7 @@ export function TabContent() {
           connectionId={activeTab.connectionId}
           bucket={activeTab.bucket}
           path={pathArray}
-          onNavigate={(newPath) => updateTabPath(activeTab.id, newPath)}
+          onNavigate={(newPath) => updateTabPath(paneId, activeTab.id, newPath)}
           onGoHome={handleGoHome}
         />
       </div>

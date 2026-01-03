@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useObjects, useDeleteObjects } from "@/lib/queries/objects";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useBrowserStore } from "@/lib/stores/browser-store";
+import { usePaneContextSafe } from "@/lib/contexts/pane-context";
 import { Breadcrumb } from "./breadcrumb";
 import { FileList } from "./file-list";
 import { UploadZone, UploadButton } from "./upload-zone";
@@ -26,7 +27,13 @@ interface FileBrowserProps {
 
 export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoHome }: FileBrowserProps) {
   const { statuses } = useConnectionStore();
-  const { selectedItems, clearSelection } = useBrowserStore();
+  const paneContext = usePaneContextSafe();
+  const paneId = paneContext?.paneId || "pane-default";
+
+  const { getPaneState, clearSelection } = useBrowserStore();
+  const paneState = getPaneState(paneId);
+  const selectedItems = paneState.selectedItems;
+
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";
   const status = statuses[connectionId];
 
@@ -90,7 +97,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
         title: "Deleted",
         description: `Successfully deleted ${selectedItems.size} item(s)`,
       });
-      clearSelection();
+      clearSelection(paneId);
     } catch (error) {
       toast({
         title: "Failed to delete",
@@ -182,6 +189,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
             onPreview={setPreviewObject}
             onDownload={handleDownload}
             onNavigate={onNavigate}
+            paneId={paneId}
           />
         </div>
       </div>

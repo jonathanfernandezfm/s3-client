@@ -1,5 +1,5 @@
-import { TabContainer } from "@/components/tabs/tab-container";
+import { SplitViewContainer } from "@/components/split-view/split-view-container";
 
 export default function BucketsPage() {
-  return <TabContainer />;
+  return <SplitViewContainer />;
 }

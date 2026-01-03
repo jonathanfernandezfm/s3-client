@@ -21,6 +21,7 @@ interface FileListProps {
   onPreview: (object: S3Object) => void;
   onDownload: (key: string) => void;
   onNavigate?: (path: string) => void;
+  paneId: string;
 }
 
 export function FileList({
@@ -33,18 +34,22 @@ export function FileList({
   onPreview,
   onDownload,
   onNavigate,
+  paneId,
 }: FileListProps) {
-  const { selectedItems, toggleSelection, selectAll, clearSelection } =
+  const { getPaneState, toggleSelection, selectAll, clearSelection } =
     useBrowserStore();
+
+  const paneState = getPaneState(paneId);
+  const selectedItems = paneState.selectedItems;
 
   const allSelected =
     objects.length > 0 && objects.every((o) => selectedItems.has(o.key));
 
   const handleSelectAll = () => {
     if (allSelected) {
-      clearSelection();
+      clearSelection(paneId);
     } else {
-      selectAll(objects.map((o) => o.key));
+      selectAll(paneId, objects.map((o) => o.key));
     }
   };
 
@@ -83,7 +88,7 @@ export function FileList({
             bucket={bucket}
             currentPath={currentPath}
             isSelected={selectedItems.has(object.key)}
-            onSelect={() => toggleSelection(object.key)}
+            onSelect={() => toggleSelection(paneId, object.key)}
             onDelete={() => onDelete(object.key)}
             onPreview={() => onPreview(object)}
             onDownload={() => onDownload(object.key)}

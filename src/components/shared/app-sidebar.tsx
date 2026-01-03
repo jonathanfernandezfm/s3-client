@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useConnectionStore } from "@/lib/stores/connection-store";
-import { useTabStore } from "@/lib/stores/tab-store";
+import { useLayoutStore } from "@/lib/stores/layout-store";
 import { useConnections } from "@/lib/queries/connections";
 import { Database, Settings, FolderOpen, CheckCircle2, XCircle } from "lucide-react";
 
@@ -12,7 +12,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: connections = [] } = useConnections();
   const { statuses } = useConnectionStore();
-  const { activeTabId, resetTabToBuckets } = useTabStore();
+  const { panes, focusedPaneId, resetTabToBuckets } = useLayoutStore();
 
   const connectedCount = connections.filter(
     (conn) => statuses[conn.id]?.connected
@@ -26,8 +26,13 @@ export function AppSidebar() {
     pathname === "/buckets" || pathname.startsWith("/buckets/") || pathname.startsWith("/browser/");
 
   const handleBucketsClick = () => {
-    if (activeTabId) {
-      resetTabToBuckets(activeTabId);
+    // Reset the active tab in the focused pane to buckets
+    const targetPaneId = focusedPaneId || Object.keys(panes)[0];
+    if (targetPaneId) {
+      const pane = panes[targetPaneId];
+      if (pane?.activeTabId) {
+        resetTabToBuckets(targetPaneId, pane.activeTabId);
+      }
     }
   };
 
