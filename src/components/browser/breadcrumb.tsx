@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, MoreHorizontal } from "lucide-react";
 
 interface BreadcrumbProps {
   connectionId: string;
@@ -9,9 +9,17 @@ interface BreadcrumbProps {
   path: string;
   onNavigate?: (path: string) => void;
   onGoHome?: () => void;
+  maxVisibleItems?: number;
 }
 
-export function Breadcrumb({ connectionId, bucket, path, onNavigate, onGoHome }: BreadcrumbProps) {
+export function Breadcrumb({
+  connectionId,
+  bucket,
+  path,
+  onNavigate,
+  onGoHome,
+  maxVisibleItems = 3,
+}: BreadcrumbProps) {
   const parts = path.split("/").filter(Boolean);
 
   const buildPath = (index: number) => {
@@ -38,43 +46,110 @@ export function Breadcrumb({ connectionId, bucket, path, onNavigate, onGoHome }:
     }
   };
 
+  // Handle ellipsis click - go back one level
+  const handleEllipsisClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (parts.length > 1 && onNavigate) {
+      const parentPath = parts.slice(0, -1).join("/") + "/";
+      onNavigate(parentPath);
+    }
+  };
+
+  // Determine which parts to show
+  const shouldCollapse = parts.length > maxVisibleItems;
+  let visibleParts: { part: string; originalIndex: number }[] = [];
+
+  if (shouldCollapse) {
+    // Show first item, ellipsis, and last (maxVisibleItems - 1) items
+    visibleParts = [
+      { part: parts[0], originalIndex: 0 },
+      ...parts.slice(-(maxVisibleItems - 1)).map((part, i) => ({
+        part,
+        originalIndex: parts.length - (maxVisibleItems - 1) + i,
+      })),
+    ];
+  } else {
+    visibleParts = parts.map((part, index) => ({ part, originalIndex: index }));
+  }
+
   return (
-    <nav className="flex items-center space-x-1 text-sm">
+    <nav className="flex items-center text-sm min-w-0 overflow-hidden">
       <Link
         href="/buckets"
-        className="flex items-center hover:text-foreground text-muted-foreground"
+        className="flex items-center hover:text-foreground text-muted-foreground shrink-0"
         onClick={handleHomeClick}
         title="Back to buckets"
       >
         <Home className="h-4 w-4" />
       </Link>
 
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
 
       <Link
         href={`/browser/${connectionId}/${bucket}`}
-        className={`hover:text-foreground ${
+        className={`hover:text-foreground truncate shrink-0 max-w-[120px] ${
           parts.length === 0 ? "font-medium" : "text-muted-foreground"
         }`}
         onClick={(e) => handleClick(e, "")}
+        title={bucket}
       >
         {bucket}
       </Link>
 
-      {parts.map((part, index) => (
-        <div key={index} className="flex items-center space-x-1">
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <Link
-            href={buildHref(index)}
-            className={`hover:text-foreground ${
-              index === parts.length - 1 ? "font-medium" : "text-muted-foreground"
-            }`}
-            onClick={(e) => handleClick(e, buildPath(index))}
+      {shouldCollapse && (
+        <>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
+          <span className="text-muted-foreground truncate max-w-[150px]" title={parts[0]}>
+            <Link
+              href={buildHref(0)}
+              className="hover:text-foreground"
+              onClick={(e) => handleClick(e, buildPath(0))}
+            >
+              {parts[0]}
+            </Link>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
+          <button
+            onClick={handleEllipsisClick}
+            className="flex items-center hover:text-foreground text-muted-foreground hover:bg-muted px-1 py-0.5 rounded shrink-0"
+            title="Go to parent folder"
           >
-            {part}
-          </Link>
-        </div>
-      ))}
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {visibleParts.slice(1).map(({ part, originalIndex }, i) => (
+            <div key={originalIndex} className="flex items-center min-w-0">
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
+              <Link
+                href={buildHref(originalIndex)}
+                className={`hover:text-foreground truncate max-w-[150px] ${
+                  originalIndex === parts.length - 1 ? "font-medium" : "text-muted-foreground"
+                }`}
+                onClick={(e) => handleClick(e, buildPath(originalIndex))}
+                title={part}
+              >
+                {part}
+              </Link>
+            </div>
+          ))}
+        </>
+      )}
+
+      {!shouldCollapse &&
+        parts.map((part, index) => (
+          <div key={index} className="flex items-center min-w-0">
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
+            <Link
+              href={buildHref(index)}
+              className={`hover:text-foreground truncate max-w-[150px] ${
+                index === parts.length - 1 ? "font-medium" : "text-muted-foreground"
+              }`}
+              onClick={(e) => handleClick(e, buildPath(index))}
+              title={part}
+            >
+              {part}
+            </Link>
+          </div>
+        ))}
     </nav>
   );
 }
