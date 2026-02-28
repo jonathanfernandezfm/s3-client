@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAllBuckets } from "@/lib/queries/buckets";
+import { useWorkspaces } from "@/lib/queries/workspaces";
 import { BucketCard } from "./bucket-card";
 import { CreateBucketDialog } from "./create-bucket-dialog";
 import { DeleteBucketDialog } from "./delete-bucket-dialog";
@@ -15,10 +16,19 @@ interface BucketListProps {
 
 export function BucketList({ onOpenBucket }: BucketListProps = {}) {
   const { groups, isLoading, hasAnyConnections } = useAllBuckets();
+  const { selectedWorkspace, isLoading: isLoadingWorkspaces } = useWorkspaces();
   const [deletingBucket, setDeletingBucket] = useState<{
     name: string;
     connectionId: string;
   } | null>(null);
+
+  if (isLoadingWorkspaces || !selectedWorkspace || (isLoading && !hasAnyConnections)) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!hasAnyConnections) {
     return (
@@ -29,7 +39,7 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
           Add an S3 connection to view buckets
         </p>
         <Button asChild>
-          <Link href="/settings/connections">Add Connection</Link>
+          <Link href="/connections">Add Connection</Link>
         </Button>
       </div>
     );
@@ -57,12 +67,18 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
               <h2 className="text-lg font-semibold">
                 {getDisplayName(group.connection)}
               </h2>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground border rounded px-1.5 py-0.5">
+                {group.connection.role}
+              </span>
               <span className="text-sm text-muted-foreground">
                 ({group.buckets.length} bucket
                 {group.buckets.length !== 1 ? "s" : ""})
               </span>
             </div>
-            <CreateBucketDialog connectionId={group.connection.id} />
+            <CreateBucketDialog
+              connectionId={group.connection.id}
+              disabled={group.connection.role !== "ADMIN"}
+            />
           </div>
 
           {group.isLoading ? (
@@ -84,6 +100,7 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
                   bucket={bucket}
                   connectionId={group.connection.id}
                   connectionName={getDisplayName(group.connection)}
+                  canDelete={group.connection.role === "ADMIN"}
                   onDelete={(name) =>
                     setDeletingBucket({
                       name,
@@ -97,7 +114,10 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center border rounded-lg border-dashed">
               <p className="text-muted-foreground mb-4">No buckets found</p>
-              <CreateBucketDialog connectionId={group.connection.id} />
+              <CreateBucketDialog
+                connectionId={group.connection.id}
+                disabled={group.connection.role !== "ADMIN"}
+              />
             </div>
           )}
         </div>

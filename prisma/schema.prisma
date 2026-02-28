@@ -17,6 +17,16 @@ enum SubscriptionTier {
   ENTERPRISE
 }
 
+enum TeamRole {
+  ADMIN
+  VIEWER
+}
+
+enum WorkspaceType {
+  PERSONAL
+  TEAM
+}
+
 // User model synced from Clerk
 model User {
   id        String   @id @default(uuid())
@@ -29,8 +39,11 @@ model User {
   // Subscription relationship
   subscription Subscription?
 
-  // User's S3 connections
-  connections Connection[]
+  // Workspace and team relationships
+  personalWorkspace Workspace?
+  teamMemberships   TeamMember[]
+  createdTeams      Team[]       @relation("TeamCreator")
+  createdConnections Connection[] @relation("ConnectionCreator")
 
   // Usage tracking
   usageRecords UsageRecord[]
@@ -84,6 +97,54 @@ model UsageRecord {
   @@map("usage_records")
 }
 
+model Team {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  createdById String
+  createdBy   User         @relation("TeamCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  workspace   Workspace?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id     String   @id @default(uuid())
+  teamId String
+  userId String
+  role   TeamRole @default(VIEWER)
+  team   Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model Workspace {
+  id     String        @id @default(uuid())
+  type   WorkspaceType
+  userId String?       @unique
+  teamId String?       @unique
+  user   User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  connections Connection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@map("workspaces")
+}
+
 // S3 Connection configuration
 // Stores connection details for S3-compatible storage endpoints
 model Connection {
@@ -95,12 +156,16 @@ model Connection {
   secretAccessKey String // AWS secret access key (encrypted in production)
   forcePathStyle  Boolean @default(true) // Required for MinIO and some S3-compatible services
 
-  // User ownership
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Workspace ownership
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?     @relation("ConnectionCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
 
   @@map("connections")
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db/prisma";
 import type { AuthUser } from "./clerk";
 
@@ -27,13 +27,57 @@ export function withAuth<T extends RouteContext = RouteContext>(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      const user = await prisma.user.findUnique({
+      let user = await prisma.user.findUnique({
         where: { clerkId: userId },
         include: { subscription: true },
       });
 
       if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        const clerkUser = await currentUser();
+        if (!clerkUser) {
+          return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        const primaryEmail =
+          clerkUser.emailAddresses.find(
+            (email) => email.id === clerkUser.primaryEmailAddressId
+          )?.emailAddress ??
+          clerkUser.emailAddresses[0]?.emailAddress;
+
+        if (!primaryEmail) {
+          return NextResponse.json(
+            { error: "User is missing an email address" },
+            { status: 400 }
+          );
+        }
+
+        user = await prisma.user.upsert({
+          where: { clerkId: userId },
+          update: {
+            email: primaryEmail,
+            firstName: clerkUser.firstName,
+            lastName: clerkUser.lastName,
+            imageUrl: clerkUser.imageUrl,
+          },
+          create: {
+            clerkId: userId,
+            email: primaryEmail,
+            firstName: clerkUser.firstName,
+            lastName: clerkUser.lastName,
+            imageUrl: clerkUser.imageUrl,
+            subscription: {
+              create: {
+                tier: "FREE",
+              },
+            },
+            personalWorkspace: {
+              create: {
+                type: "PERSONAL",
+              },
+            },
+          },
+          include: { subscription: true },
+        });
       }
 
       const params = context?.params ? await context.params : {};

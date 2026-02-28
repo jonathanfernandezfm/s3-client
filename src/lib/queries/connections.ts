@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export interface ConnectionResponse {
   id: string;
@@ -10,6 +11,9 @@ export interface ConnectionResponse {
   accessKeyId: string;
   secretAccessKey?: string;
   forcePathStyle: boolean;
+  workspaceId: string;
+  workspaceType: "PERSONAL" | "TEAM";
+  role: "ADMIN" | "VIEWER";
   createdAt: string;
   updatedAt?: string;
 }
@@ -21,16 +25,23 @@ export interface ConnectionInput {
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle?: boolean;
+  workspaceId?: string;
 }
 
 export const connectionKeys = {
   all: ["connections"] as const,
-  list: () => [...connectionKeys.all, "list"] as const,
+  list: (workspaceId?: string | null) =>
+    [...connectionKeys.all, "list", workspaceId ?? "all"] as const,
   detail: (id: string) => [...connectionKeys.all, "detail", id] as const,
 };
 
-async function fetchConnections(): Promise<ConnectionResponse[]> {
-  const response = await fetch("/api/connections");
+async function fetchConnections(
+  workspaceId?: string | null
+): Promise<ConnectionResponse[]> {
+  const params = workspaceId
+    ? `?workspaceId=${encodeURIComponent(workspaceId)}`
+    : "";
+  const response = await fetch(`/api/connections${params}`);
 
   if (!response.ok) {
     const error = await response.json();
@@ -100,9 +111,12 @@ async function deleteConnection(id: string): Promise<{ success: boolean }> {
 }
 
 export function useConnections() {
+  const selectedWorkspaceId = useWorkspaceStore((s) => s.selectedWorkspaceId);
+
   return useQuery({
-    queryKey: connectionKeys.list(),
-    queryFn: fetchConnections,
+    queryKey: connectionKeys.list(selectedWorkspaceId),
+    queryFn: () => fetchConnections(selectedWorkspaceId),
+    enabled: !!selectedWorkspaceId,
   });
 }
 
@@ -116,9 +130,14 @@ export function useConnection(id: string) {
 
 export function useCreateConnection() {
   const queryClient = useQueryClient();
+  const selectedWorkspaceId = useWorkspaceStore((s) => s.selectedWorkspaceId);
 
   return useMutation({
-    mutationFn: createConnection,
+    mutationFn: (data: ConnectionInput) =>
+      createConnection({
+        ...data,
+        workspaceId: data.workspaceId ?? selectedWorkspaceId ?? undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: connectionKeys.all });
     },

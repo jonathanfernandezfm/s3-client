@@ -19,9 +19,10 @@ import { Plus, Loader2 } from "lucide-react";
 
 interface CreateBucketDialogProps {
   connectionId: string;
+  disabled?: boolean;
 }
 
-export function CreateBucketDialog({ connectionId }: CreateBucketDialogProps) {
+export function CreateBucketDialog({ connectionId, disabled = false }: CreateBucketDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const createBucket = useCreateBucket(connectionId);
@@ -55,7 +56,7 @@ export function CreateBucketDialog({ connectionId }: CreateBucketDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" disabled={disabled}>
           <Plus className="mr-2 h-4 w-4" />
           Create Bucket
         </Button>

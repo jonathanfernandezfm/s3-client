@@ -18,6 +18,7 @@ interface FileListProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
+  canWrite?: boolean;
   isLoading?: boolean;
   onDelete: (key: string) => void;
   onPreview: (object: S3Object) => void;
@@ -47,6 +48,7 @@ export function FileList({
   connectionId,
   bucket,
   currentPath,
+  canWrite = true,
   isLoading,
   onDelete,
   onPreview,
@@ -79,7 +81,7 @@ export function FileList({
 
   // Drop zone handlers
   const handleDragOver = (e: React.DragEvent) => {
-    if (!isValidDropTarget) return;
+    if (!isValidDropTarget || !canWrite) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = e.shiftKey ? "move" : "copy";
     setIsListDragOver(true);
@@ -99,7 +101,7 @@ export function FileList({
     e.preventDefault();
     setIsListDragOver(false);
 
-    if (!isValidDropTarget) return;
+    if (!isValidDropTarget || !canWrite) return;
 
     try {
       const data = JSON.parse(e.dataTransfer.getData("application/x-s3-objects"));
@@ -111,6 +113,7 @@ export function FileList({
   };
 
   const handleFolderDrop = (targetFolderKey: string, operation: "copy" | "move") => {
+    if (!canWrite) return;
     // Get the drag data from the store since we can't access dataTransfer here
     const dragState = useBrowserStore.getState().dragState;
     if (!dragState.isDragging) return;
@@ -177,13 +180,14 @@ export function FileList({
         </TableHeader>
         <TableBody>
           {objects.map((object) => (
-            <FileRow
-              key={object.key}
-              object={object}
-              connectionId={connectionId}
-              bucket={bucket}
-              currentPath={currentPath}
-              isSelected={selectedItems.has(object.key)}
+          <FileRow
+            key={object.key}
+            object={object}
+            connectionId={connectionId}
+            bucket={bucket}
+            currentPath={currentPath}
+            canWrite={canWrite}
+            isSelected={selectedItems.has(object.key)}
               onSelect={() => toggleSelection(paneId, object.key)}
               onDelete={() => onDelete(object.key)}
               onPreview={() => onPreview(object)}
@@ -196,7 +200,7 @@ export function FileList({
               onDragEnd={onDragEnd}
               onFolderDrop={handleFolderDrop}
               isDragging={isDragging}
-              canDropOnFolder={isValidDropTarget}
+              canDropOnFolder={isValidDropTarget && canWrite}
             />
           ))}
         </TableBody>

@@ -21,12 +21,14 @@ interface CreateFolderDialogProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
+  disabled?: boolean;
 }
 
 export function CreateFolderDialog({
   connectionId,
   bucket,
   currentPath,
+  disabled = false,
 }: CreateFolderDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -63,7 +65,7 @@ export function CreateFolderDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={disabled}>
           <FolderPlus className="mr-2 h-4 w-4" />
           New Folder
         </Button>

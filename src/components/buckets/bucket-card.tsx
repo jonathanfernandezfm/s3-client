@@ -19,9 +19,17 @@ interface BucketCardProps {
   connectionName?: string;
   onDelete: (name: string) => void;
   onOpen?: (connectionId: string, connectionName: string, bucketName: string) => void;
+  canDelete?: boolean;
 }
 
-export function BucketCard({ bucket, connectionId, connectionName, onDelete, onOpen }: BucketCardProps) {
+export function BucketCard({
+  bucket,
+  connectionId,
+  connectionName,
+  onDelete,
+  onOpen,
+  canDelete = true,
+}: BucketCardProps) {
   const browserUrl = `/browser/${connectionId}/${bucket.name}`;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -57,16 +65,18 @@ export function BucketCard({ bucket, connectionId, connectionName, onDelete, onO
                 <FolderOpen className="mr-2 h-4 w-4" />
                 Browse
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onDelete(bucket.name);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete(bucket.name);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>

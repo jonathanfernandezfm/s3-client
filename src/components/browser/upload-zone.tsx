@@ -13,12 +13,14 @@ interface UploadZoneProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
+  disabled?: boolean;
 }
 
 export function UploadZone({
   connectionId,
   bucket,
   currentPath,
+  disabled = false,
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const { uploads, addUpload, updateUpload, removeUpload } = useUploadStore();
@@ -133,6 +135,10 @@ export function UploadZone({
 
   // Global drag and drop listeners for full-screen dropzone
   useEffect(() => {
+    if (disabled) {
+      return;
+    }
+
     window.addEventListener("dragenter", handleDragEnter);
     window.addEventListener("dragleave", handleDragLeave);
     window.addEventListener("dragover", handleDragOver);
@@ -144,7 +150,7 @@ export function UploadZone({
       window.removeEventListener("dragover", handleDragOver);
       window.removeEventListener("drop", handleDrop);
     };
-  }, [handleDragEnter, handleDragLeave, handleDragOver, handleDrop]);
+  }, [handleDragEnter, handleDragLeave, handleDragOver, handleDrop, disabled]);
 
   const activeUploads = uploads.filter(
     (u) => u.bucket === bucket && u.key.startsWith(currentPath)
@@ -189,9 +195,15 @@ interface UploadButtonProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
+  disabled?: boolean;
 }
 
-export function UploadButton({ connectionId, bucket, currentPath }: UploadButtonProps) {
+export function UploadButton({
+  connectionId,
+  bucket,
+  currentPath,
+  disabled = false,
+}: UploadButtonProps) {
   const { addUpload, updateUpload } = useUploadStore();
   const { addNotification } = useNotificationStore();
   const queryClient = useQueryClient();
@@ -248,11 +260,14 @@ export function UploadButton({ connectionId, bucket, currentPath }: UploadButton
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (disabled) {
+        return;
+      }
       const files = Array.from(e.target.files || []);
       files.forEach(uploadFile);
       e.target.value = "";
     },
-    [uploadFile]
+    [uploadFile, disabled]
   );
 
   return (
@@ -262,8 +277,9 @@ export function UploadButton({ connectionId, bucket, currentPath }: UploadButton
         multiple
         onChange={handleFileSelect}
         className="hidden"
+        disabled={disabled}
       />
-      <Button asChild>
+      <Button asChild disabled={disabled}>
         <span>
           <Upload className="mr-2 h-4 w-4" />
           Upload file

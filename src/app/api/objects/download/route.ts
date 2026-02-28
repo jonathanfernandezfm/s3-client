@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 
 export const POST = withAuth(async (req, { user }) => {
@@ -20,15 +20,15 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    const connection = await getConnectionById(connectionId, user.id);
-    if (!connection) {
+    const access = await getConnectionAccessById(connectionId, user.id);
+    if (!access) {
       return NextResponse.json(
         { error: "Connection not found" },
         { status: 404 }
       );
     }
 
-    const client = createS3Client(connection);
+    const client = createS3Client(access.connection);
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: key,

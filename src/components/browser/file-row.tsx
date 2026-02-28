@@ -31,6 +31,7 @@ interface FileRowProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
+  canWrite?: boolean;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -72,6 +73,7 @@ export function FileRow({
   connectionId,
   bucket,
   currentPath,
+  canWrite = true,
   isSelected,
   onSelect,
   onDelete,
@@ -246,10 +248,12 @@ export function FileRow({
                 Download
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className="text-destructive" onClick={onDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
+            {canWrite && (
+              <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

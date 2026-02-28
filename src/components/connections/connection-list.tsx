@@ -6,6 +6,7 @@ import {
   useDeleteConnection,
   type ConnectionResponse,
 } from "@/lib/queries/connections";
+import { useWorkspaces } from "@/lib/queries/workspaces";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -39,6 +40,7 @@ interface ConnectionListProps {
 
 export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
   const { data: connections = [], isLoading } = useConnections();
+  const { selectedWorkspace, isLoading: isLoadingWorkspaces } = useWorkspaces();
   const deleteConnection = useDeleteConnection();
   const { addNotification } = useNotificationStore();
 
@@ -74,7 +76,10 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
     return connection.name || connection.endpoint;
   };
 
-  if (isLoading) {
+  const canManage = (connection: ConnectionResponse) => connection.role === "ADMIN";
+  const canAddConnection = selectedWorkspace?.role === "ADMIN";
+
+  if (isLoading || isLoadingWorkspaces || !selectedWorkspace) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -90,7 +95,7 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
         <p className="text-muted-foreground mb-4">
           Add your first S3 connection to get started
         </p>
-        <Button onClick={onAdd}>
+        <Button onClick={onAdd} disabled={!canAddConnection}>
           <Plus className="mr-2 h-4 w-4" />
           Add Connection
         </Button>
@@ -104,7 +109,7 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
         <h2 className="text-lg font-semibold">
           {connections.length} Connection{connections.length !== 1 ? "s" : ""}
         </h2>
-        <Button onClick={onAdd}>
+        <Button onClick={onAdd} disabled={!canAddConnection}>
           <Plus className="mr-2 h-4 w-4" />
           Add Connection
         </Button>
@@ -119,27 +124,32 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
                 <span className="text-sm font-medium truncate">
                   {getDisplayName(connection)}
                 </span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground border rounded px-1.5 py-0.5">
+                  {connection.role}
+                </span>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                    <MoreVertical className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(connection)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setDeletingConnection(connection)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {canManage(connection) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(connection)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => setDeletingConnection(connection)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1 truncate pl-6">
               {connection.endpoint}

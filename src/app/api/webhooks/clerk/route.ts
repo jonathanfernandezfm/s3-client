@@ -54,6 +54,11 @@ export async function POST(req: Request) {
           firstName: first_name,
           lastName: last_name,
           imageUrl: image_url,
+          personalWorkspace: {
+            create: {
+              type: "PERSONAL",
+            },
+          },
           subscription: {
             create: {
               tier: "FREE",

@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import type { Connection } from "@/generated/prisma/client";
+import type { Connection, Workspace } from "@/generated/prisma/client";
 
 export type ConnectionInput = {
   name?: string | null;
@@ -12,40 +12,213 @@ export type ConnectionInput = {
 
 export type ConnectionUpdate = Partial<ConnectionInput>;
 
+export type ConnectionRole = "ADMIN" | "VIEWER";
+
+export type WorkspaceAccess = {
+  workspace: Workspace;
+  role: ConnectionRole;
+};
+
+export type ConnectionAccess = {
+  connection: Connection;
+  workspaceId: string;
+  workspaceType: "PERSONAL" | "TEAM";
+  role: ConnectionRole;
+};
+
+function getRoleForWorkspace(
+  userId: string,
+  workspace: {
+    type: "PERSONAL" | "TEAM";
+    userId: string | null;
+    team: { members: Array<{ role: "ADMIN" | "VIEWER" }> } | null;
+  }
+): ConnectionRole | null {
+  if (workspace.type === "PERSONAL") {
+    return workspace.userId === userId ? "ADMIN" : null;
+  }
+
+  return workspace.team?.members[0]?.role ?? null;
+}
+
+export async function ensurePersonalWorkspace(userId: string): Promise<Workspace> {
+  return prisma.workspace.upsert({
+    where: { userId },
+    update: {},
+    create: {
+      type: "PERSONAL",
+      userId,
+    },
+  });
+}
+
+export async function getWorkspaceAccess(
+  workspaceId: string,
+  userId: string
+): Promise<WorkspaceAccess | null> {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    include: {
+      team: {
+        include: {
+          members: {
+            where: { userId },
+            select: { role: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  if (!workspace) {
+    return null;
+  }
+
+  const role = getRoleForWorkspace(userId, workspace);
+  if (!role) {
+    return null;
+  }
+
+  return { workspace, role };
+}
+
 /**
- * Get all connections for a user
+ * Get all connections a user can access.
+ * Optionally scope by workspace ID.
  */
 export async function getConnectionsByUserId(
-  userId: string
+  userId: string,
+  workspaceId?: string
 ): Promise<Connection[]> {
+  if (workspaceId) {
+    const access = await getWorkspaceAccess(workspaceId, userId);
+    if (!access) {
+      return [];
+    }
+
+    return prisma.connection.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   return prisma.connection.findMany({
-    where: { userId },
+    where: {
+      OR: [
+        {
+          workspace: {
+            type: "PERSONAL",
+            userId,
+          },
+        },
+        {
+          workspace: {
+            type: "TEAM",
+            team: {
+              members: {
+                some: { userId },
+              },
+            },
+          },
+        },
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 }
 
 /**
- * Get a connection by ID, ensuring it belongs to the user
+ * Resolve connection access for a user, including role.
+ */
+export async function getConnectionAccessById(
+  id: string,
+  userId: string
+): Promise<ConnectionAccess | null> {
+  const connection = await prisma.connection.findUnique({
+    where: { id },
+    include: {
+      workspace: {
+        include: {
+          team: {
+            include: {
+              members: {
+                where: { userId },
+                select: { role: true },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!connection) {
+    return null;
+  }
+
+  const role = getRoleForWorkspace(userId, connection.workspace);
+  if (!role) {
+    return null;
+  }
+
+  return {
+    connection: {
+      id: connection.id,
+      name: connection.name,
+      endpoint: connection.endpoint,
+      region: connection.region,
+      accessKeyId: connection.accessKeyId,
+      secretAccessKey: connection.secretAccessKey,
+      forcePathStyle: connection.forcePathStyle,
+      workspaceId: connection.workspaceId,
+      createdById: connection.createdById,
+      createdAt: connection.createdAt,
+      updatedAt: connection.updatedAt,
+    },
+    workspaceId: connection.workspace.id,
+    workspaceType: connection.workspace.type,
+    role,
+  };
+}
+
+/**
+ * Get a connection by ID with read access.
  */
 export async function getConnectionById(
   id: string,
   userId: string
 ): Promise<Connection | null> {
-  return prisma.connection.findFirst({
-    where: { id, userId },
-  });
+  const access = await getConnectionAccessById(id, userId);
+  return access?.connection ?? null;
 }
 
 /**
- * Create a new connection for a user
+ * Create a new connection in a workspace.
+ * If workspaceId is omitted, uses the user's personal workspace.
  */
 export async function createConnection(
   userId: string,
-  data: ConnectionInput
+  data: ConnectionInput,
+  workspaceId?: string
 ): Promise<Connection> {
+  let targetWorkspaceId = workspaceId;
+
+  if (!targetWorkspaceId) {
+    const personalWorkspace = await ensurePersonalWorkspace(userId);
+    targetWorkspaceId = personalWorkspace.id;
+  } else {
+    const access = await getWorkspaceAccess(targetWorkspaceId, userId);
+    if (!access || access.role !== "ADMIN") {
+      throw new Error("Forbidden workspace access");
+    }
+  }
+
   return prisma.connection.create({
     data: {
-      userId,
+      workspaceId: targetWorkspaceId,
+      createdById: userId,
       name: data.name,
       endpoint: data.endpoint,
       region: data.region,
@@ -57,18 +230,15 @@ export async function createConnection(
 }
 
 /**
- * Update a connection, ensuring it belongs to the user
+ * Update a connection, requiring ADMIN role.
  */
 export async function updateConnection(
   id: string,
   userId: string,
   data: ConnectionUpdate
 ): Promise<Connection | null> {
-  const connection = await prisma.connection.findFirst({
-    where: { id, userId },
-  });
-
-  if (!connection) {
+  const access = await getConnectionAccessById(id, userId);
+  if (!access || access.role !== "ADMIN") {
     return null;
   }
 
@@ -79,17 +249,14 @@ export async function updateConnection(
 }
 
 /**
- * Delete a connection, ensuring it belongs to the user
+ * Delete a connection, requiring ADMIN role.
  */
 export async function deleteConnection(
   id: string,
   userId: string
 ): Promise<Connection | null> {
-  const connection = await prisma.connection.findFirst({
-    where: { id, userId },
-  });
-
-  if (!connection) {
+  const access = await getConnectionAccessById(id, userId);
+  if (!access || access.role !== "ADMIN") {
     return null;
   }
 

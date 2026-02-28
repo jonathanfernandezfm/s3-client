@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useObjects, useDeleteObjects, useCopyObjects, useMoveObjects } from "@/lib/queries/objects";
+import { useConnections } from "@/lib/queries/connections";
 import { useBrowserStore } from "@/lib/stores/browser-store";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { usePaneContextSafe } from "@/lib/contexts/pane-context";
@@ -29,8 +30,11 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
 
   const { getPaneState, clearSelection, dragState, startDrag, endDrag } = useBrowserStore();
   const { addNotification, updateNotification } = useNotificationStore();
+  const { data: connections = [] } = useConnections();
   const paneState = getPaneState(paneId);
   const selectedItems = paneState.selectedItems;
+  const connection = connections.find((item) => item.id === connectionId);
+  const canWrite = connection ? connection.role === "ADMIN" : true;
 
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";
 
@@ -52,6 +56,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
   // Drag and drop state
   const isDragging = dragState.isDragging;
   const isValidDropTarget =
+    canWrite &&
     isDragging &&
     (dragState.sourcePaneId !== paneId ||
       dragState.sourceConnectionId !== connectionId ||
@@ -81,6 +86,10 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
       operation: "copy" | "move",
       targetFolder?: string
     ) => {
+      if (!canWrite) {
+        return;
+      }
+
       const targetPath = targetFolder || currentPath;
       const totalCount = data.items.length;
       const operationLabel = operation === "copy" ? "Copying" : "Moving";
@@ -145,6 +154,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
       endDrag();
     },
     [
+      canWrite,
       connectionId,
       bucket,
       currentPath,
@@ -158,10 +168,12 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
   );
 
   const handleDelete = async (key: string) => {
+    if (!canWrite) return;
     setDeletingKey(key);
   };
 
   const confirmDelete = async () => {
+    if (!canWrite) return;
     if (!deletingKey) return;
 
     try {
@@ -184,6 +196,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
   };
 
   const handleBulkDelete = async () => {
+    if (!canWrite) return;
     if (selectedItems.size === 0) return;
 
     try {
@@ -246,7 +259,12 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {selectedItems.size > 0 && (
+          {!canWrite && (
+            <span className="text-xs uppercase tracking-wide text-muted-foreground border rounded px-2 py-1">
+              Viewer
+            </span>
+          )}
+          {canWrite && selectedItems.size > 0 && (
             <Button
               variant="destructive"
               size="sm"
@@ -261,11 +279,13 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
             connectionId={connectionId}
             bucket={bucket}
             currentPath={currentPath}
+            disabled={!canWrite}
           />
           <CreateFolderDialog
             connectionId={connectionId}
             bucket={bucket}
             currentPath={currentPath}
+            disabled={!canWrite}
           />
           <Button variant="outline" size="icon" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
@@ -285,6 +305,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
             connectionId={connectionId}
             bucket={bucket}
             currentPath={currentPath}
+            canWrite={canWrite}
             isLoading={showLoadingOverlay}
             onDelete={handleDelete}
             onPreview={setPreviewObject}
@@ -319,6 +340,7 @@ export function FileBrowser({ connectionId, bucket, path = [], onNavigate, onGoH
         connectionId={connectionId}
         bucket={bucket}
         currentPath={currentPath}
+        disabled={!canWrite}
       />
     </div>
   );

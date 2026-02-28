@@ -6,7 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 
 interface CopyRequest {
@@ -51,31 +51,38 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    // Get connections
-    const sourceConnection = await getConnectionById(sourceConnectionId, user.id);
-    const targetConnection = await getConnectionById(targetConnectionId, user.id);
+    // Get connections and enforce permissions.
+    const sourceAccess = await getConnectionAccessById(sourceConnectionId, user.id);
+    const targetAccess = await getConnectionAccessById(targetConnectionId, user.id);
 
-    if (!sourceConnection) {
+    if (!sourceAccess) {
       return NextResponse.json(
         { error: "Source connection not found" },
         { status: 404 }
       );
     }
 
-    if (!targetConnection) {
+    if (!targetAccess) {
       return NextResponse.json(
         { error: "Target connection not found" },
         { status: 404 }
       );
     }
 
-    const sourceClient = createS3Client(sourceConnection);
-    const targetClient = createS3Client(targetConnection);
+    if (targetAccess.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "You do not have permission to write to the target connection" },
+        { status: 403 }
+      );
+    }
+
+    const sourceClient = createS3Client(sourceAccess.connection);
+    const targetClient = createS3Client(targetAccess.connection);
 
     const results: CopyResult[] = [];
 
     // Check if same endpoint - can use CopyObject
-    const isSameEndpoint = sourceConnection.endpoint === targetConnection.endpoint;
+    const isSameEndpoint = sourceAccess.connection.endpoint === targetAccess.connection.endpoint;
 
     for (const sourceKey of sourceKeys) {
       const isFolder = sourceKey.endsWith("/");

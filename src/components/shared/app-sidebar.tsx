@@ -4,17 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/lib/stores/layout-store";
-import { useConnections } from "@/lib/queries/connections";
-import { Database, Settings, FolderOpen, Server } from "lucide-react";
+import { useWorkspaces } from "@/lib/queries/workspaces";
+import { Database, Settings, FolderOpen, Users, Plug } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { data: connections = [] } = useConnections();
+  const { selectedWorkspace } = useWorkspaces();
   const { panes, focusedPaneId, resetTabToBuckets } = useLayoutStore();
 
   const isSettingsActive =
-    pathname === "/settings/connections" ||
-    pathname.startsWith("/settings/connections/");
+    pathname === "/settings" || pathname.startsWith("/settings/");
+
+  const isConnectionsActive =
+    pathname === "/connections" || pathname.startsWith("/connections/");
+
+  const isTeamsActive = pathname === "/teams" || pathname.startsWith("/teams/");
 
   const isBucketsActive =
     pathname === "/buckets" || pathname.startsWith("/buckets/") || pathname.startsWith("/browser/");
@@ -56,12 +60,45 @@ export function AppSidebar() {
               Buckets
             </Link>
           </li>
+          <li>
+            <Link
+              href="/connections"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                isConnectionsActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <Plug className="h-4 w-4" />
+              Connections
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/teams"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                isTeamsActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <Users className="h-4 w-4" />
+              Teams
+            </Link>
+          </li>
         </ul>
       </nav>
 
       <div className="p-4 border-t space-y-3">
+        {selectedWorkspace && (
+          <div className="text-xs text-muted-foreground px-3">
+            Workspace: <span className="font-medium text-foreground">{selectedWorkspace.name}</span>
+          </div>
+        )}
         <Link
-          href="/settings/connections"
+          href="/settings"
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
             isSettingsActive
@@ -72,13 +109,6 @@ export function AppSidebar() {
           <Settings className="h-4 w-4" />
           Settings
         </Link>
-
-        <div className="flex items-center gap-2 text-sm px-3">
-          <Server className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">
-            {connections.length} connection{connections.length !== 1 ? "s" : ""}
-          </span>
-        </div>
       </div>
     </aside>
   );

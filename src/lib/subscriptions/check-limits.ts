@@ -13,7 +13,7 @@ export type LimitCheckResult = {
  * Check if user can create a new connection
  */
 export async function canCreateConnection(
-  userId: string,
+  workspaceId: string,
   tier: SubscriptionTier
 ): Promise<LimitCheckResult> {
   const limit = TIER_LIMITS[tier].maxConnections;
@@ -23,7 +23,7 @@ export async function canCreateConnection(
   }
 
   const count = await prisma.connection.count({
-    where: { userId },
+    where: { workspaceId },
   });
 
   if (count >= limit) {

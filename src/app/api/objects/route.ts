@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import type { S3Object } from "@/types";
 
@@ -21,15 +21,15 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    const connection = await getConnectionById(connectionId, user.id);
-    if (!connection) {
+    const access = await getConnectionAccessById(connectionId, user.id);
+    if (!access) {
       return NextResponse.json(
         { error: "Connection not found" },
         { status: 404 }
       );
     }
 
-    const client = createS3Client(connection);
+    const client = createS3Client(access.connection);
     const command = new ListObjectsV2Command({
       Bucket: bucket,
       Prefix: prefix,

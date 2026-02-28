@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ListBucketsCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 
 interface TestConnectionRequest {
@@ -29,13 +29,20 @@ export const POST = withAuth(async (req, { user }) => {
 
     // If an ID is provided, fetch the connection from the database
     if (body.id) {
-      const dbConnection = await getConnectionById(body.id, user.id);
-      if (!dbConnection) {
+      const access = await getConnectionAccessById(body.id, user.id);
+      if (!access) {
         return NextResponse.json(
           { success: false, error: "Connection not found" },
           { status: 404 }
         );
       }
+      if (access.role !== "ADMIN") {
+        return NextResponse.json(
+          { success: false, error: "Insufficient permissions to test this connection" },
+          { status: 403 }
+        );
+      }
+      const dbConnection = access.connection;
       connectionConfig = {
         endpoint: dbConnection.endpoint,
         accessKeyId: dbConnection.accessKeyId,

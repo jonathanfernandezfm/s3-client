@@ -80,7 +80,7 @@ export function useAllBuckets(): {
   isLoading: boolean;
   hasAnyConnections: boolean;
 } {
-  const { data: connections = [] } = useConnections();
+  const { data: connections = [], isLoading: isConnectionsLoading } = useConnections();
 
   const queries = useQueries({
     queries: connections.map((connection) => ({
@@ -97,7 +97,7 @@ export function useAllBuckets(): {
     error: queries[index]?.error as Error | null,
   }));
 
-  const isLoading = queries.some((q) => q.isLoading);
+  const isLoading = isConnectionsLoading || queries.some((q) => q.isLoading);
   const hasAnyConnections = connections.length > 0;
 
   return { groups, isLoading, hasAnyConnections };

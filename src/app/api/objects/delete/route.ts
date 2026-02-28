@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 
 export const POST = withAuth(async (req, { user }) => {
@@ -20,15 +20,21 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    const connection = await getConnectionById(connectionId, user.id);
-    if (!connection) {
+    const access = await getConnectionAccessById(connectionId, user.id);
+    if (!access) {
       return NextResponse.json(
         { error: "Connection not found" },
         { status: 404 }
       );
     }
+    if (access.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "You do not have permission to modify objects for this connection" },
+        { status: 403 }
+      );
+    }
 
-    const client = createS3Client(connection);
+    const client = createS3Client(access.connection);
     const command = new DeleteObjectsCommand({
       Bucket: bucket,
       Delete: {

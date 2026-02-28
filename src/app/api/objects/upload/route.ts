@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionById } from "@/lib/db/connections";
+import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import {
   canUploadFileSize,
@@ -24,11 +24,17 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    const connection = await getConnectionById(connectionId, user.id);
-    if (!connection) {
+    const access = await getConnectionAccessById(connectionId, user.id);
+    if (!access) {
       return NextResponse.json(
         { error: "Connection not found" },
         { status: 404 }
+      );
+    }
+    if (access.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "You do not have permission to upload files for this connection" },
+        { status: 403 }
       );
     }
 
@@ -47,7 +53,7 @@ export const POST = withAuth(async (req, { user }) => {
       return NextResponse.json({ error: volumeCheck.reason }, { status: 403 });
     }
 
-    const client = createS3Client(connection);
+    const client = createS3Client(access.connection);
 
     const arrayBuffer = await file.arrayBuffer();
     const body = Buffer.from(arrayBuffer);
