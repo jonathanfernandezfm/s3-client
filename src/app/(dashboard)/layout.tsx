@@ -3,7 +3,7 @@ import { Header } from "@/components/shared/header";
 import { DragProvider } from "@/lib/contexts/drag-context";
 import { Notifications } from "@/components/shared/notifications";
 import { CommandPaletteMount } from "@/components/command-palette/command-palette-mount";
-import { ActivityDrawer } from "@/components/activity/activity-drawer";
+import { InfoDrawer } from "@/components/info-drawer/info-drawer";
 
 export default function DashboardLayout({
   children,
@@ -19,7 +19,7 @@ export default function DashboardLayout({
           <main className="flex-1 flex flex-col overflow-hidden">{children}</main>
         </div>
       </div>
-      <ActivityDrawer />
+      <InfoDrawer />
       <Notifications />
       <CommandPaletteMount />
     </DragProvider>
