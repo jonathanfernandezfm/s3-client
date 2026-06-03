@@ -3,6 +3,7 @@ import { DeleteBucketCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivity } from "@/lib/db/activity";
 
 type RouteContext = { params: Promise<{ bucket: string }> };
 
@@ -35,6 +36,15 @@ export const DELETE = withAuth<RouteContext>(async (req, { user, params }) => {
     const client = createS3Client(access.connection);
     const command = new DeleteBucketCommand({ Bucket: bucket });
     await client.send(command);
+
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "BUCKET_DELETE",
+      bucket,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

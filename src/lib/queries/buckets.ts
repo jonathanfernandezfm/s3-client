@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
 import { useConnections, type ConnectionResponse } from "./connections";
 import { queryKeys } from "./keys";
+import { useInvalidateActivity } from "./activity";
 import type { S3Bucket } from "@/types";
 
 async function fetchBuckets(connectionId: string): Promise<S3Bucket[]> {
@@ -105,22 +106,26 @@ export function useAllBuckets(): {
 
 export function useCreateBucket(connectionId: string) {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: (name: string) => createBucket(connectionId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.buckets.all });
+      invalidateActivity();
     },
   });
 }
 
 export function useDeleteBucket(connectionId: string) {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: (name: string) => deleteBucket(connectionId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.buckets.all });
+      invalidateActivity();
     },
   });
 }

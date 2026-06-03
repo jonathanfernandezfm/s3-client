@@ -3,6 +3,7 @@ import { PutObjectTaggingCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivity } from "@/lib/db/activity";
 
 interface TagRequest {
   connectionId: string;
@@ -48,6 +49,16 @@ export const POST = withAuth(async (req, { user }) => {
         Tagging: { TagSet: tags.map((t) => ({ Key: t.key, Value: t.value })) },
       })
     );
+
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "TAG_CHANGE",
+      bucket,
+      key,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

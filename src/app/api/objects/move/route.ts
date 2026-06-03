@@ -9,6 +9,7 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivityBatch } from "@/lib/db/activity";
 
 interface MoveRequest {
   sourceConnectionId: string;
@@ -138,6 +139,33 @@ export const POST = withAuth(async (req, { user }) => {
 
     const successful = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success).length;
+
+    const batchId = crypto.randomUUID();
+    const successfulResults = results.filter((r) => r.success);
+    if (successfulResults.length > 0) {
+      await recordActivityBatch({
+        connectionId: sourceConnectionId,
+        userId: user.id,
+        userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+        userImageUrl: user.imageUrl ?? null,
+        action: "MOVE",
+        bucket: sourceBucket,
+        items: successfulResults.map((r) => ({ key: r.sourceKey, targetKey: null })),
+        batchId,
+      });
+      if (targetConnectionId !== sourceConnectionId) {
+        await recordActivityBatch({
+          connectionId: targetConnectionId,
+          userId: user.id,
+          userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+          userImageUrl: user.imageUrl ?? null,
+          action: "MOVE",
+          bucket: targetBucket,
+          items: successfulResults.map((r) => ({ key: r.targetKey, targetKey: null })),
+          batchId,
+        });
+      }
+    }
 
     return NextResponse.json({
       results,

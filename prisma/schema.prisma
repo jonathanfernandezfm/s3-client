@@ -28,6 +28,18 @@ enum WorkspaceType {
 }
 
 // User model synced from Clerk
+enum ActivityAction {
+  UPLOAD
+  DELETE
+  COPY
+  MOVE
+  RENAME
+  FOLDER_CREATE
+  TAG_CHANGE
+  BUCKET_CREATE
+  BUCKET_DELETE
+}
+
 model User {
   id        String   @id @default(uuid())
   clerkId   String   @unique // Clerk user ID (user_xxx)
@@ -48,6 +60,8 @@ model User {
   // Usage tracking
   usageRecords UsageRecord[]
   bookmarks    Bookmark[]
+
+  activityEvents ActivityEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,11 +179,39 @@ model Connection {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  bookmarks Bookmark[]
+  bookmarks      Bookmark[]
+  activityEvents ActivityEvent[]
 
   @@index([workspaceId])
 
   @@map("connections")
+}
+
+model ActivityEvent {
+  id              String         @id @default(uuid())
+
+  connectionId    String
+  connection      Connection     @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userDisplayName String
+  userImageUrl    String?
+
+  action          ActivityAction
+  bucket          String
+  key             String?
+  targetKey       String?
+  byteSize        BigInt?
+  batchId         String?
+
+  createdAt       DateTime       @default(now())
+
+  @@index([connectionId, bucket, createdAt(sort: Desc)])
+  @@index([connectionId, bucket, key, createdAt(sort: Desc)])
+  @@index([batchId])
+  @@index([userId])
+  @@map("activity_events")
 }
 
 model Bookmark {

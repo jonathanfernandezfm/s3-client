@@ -16,9 +16,15 @@ import {
   Upload,
   FolderPlus,
   Download,
-  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+
+const AUTO_HIDE_DURATION: Record<Notification["status"], number | null> = {
+  "in-progress": null,
+  completed: 5000,
+  error: 10000,
+};
 
 function getIcon(type: NotificationType, status: Notification["status"]) {
   if (status === "in-progress") {
@@ -45,9 +51,43 @@ function getIcon(type: NotificationType, status: Notification["status"]) {
 
 function NotificationItem({ notification }: { notification: Notification }) {
   const { removeNotification } = useNotificationStore();
+  const duration = AUTO_HIDE_DURATION[notification.status];
+  const [progress, setProgress] = useState(100);
+  const pausedRef = useRef(false);
+  const progressRef = useRef(100);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!duration) return;
+
+    progressRef.current = 100;
+    setProgress(100);
+
+    const tickMs = 50;
+    const decrement = (tickMs / duration) * 100;
+
+    intervalRef.current = setInterval(() => {
+      if (pausedRef.current) return;
+      progressRef.current -= decrement;
+      if (progressRef.current <= 0) {
+        clearInterval(intervalRef.current!);
+        removeNotification(notification.id);
+      } else {
+        setProgress(progressRef.current);
+      }
+    }, tickMs);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [notification.id, notification.status, duration, removeNotification]);
 
   return (
-    <div className="flex items-start gap-3 p-3 bg-card border rounded-lg shadow-sm">
+    <div
+      className="relative flex items-start gap-3 p-3 bg-card border rounded-lg shadow-sm overflow-hidden"
+      onMouseEnter={() => { pausedRef.current = true; }}
+      onMouseLeave={() => { pausedRef.current = false; }}
+    >
       <div className="mt-0.5">{getIcon(notification.type, notification.status)}</div>
 
       <div className="flex-1 min-w-0">
@@ -89,6 +129,13 @@ function NotificationItem({ notification }: { notification: Notification }) {
         >
           <X className="h-3.5 w-3.5" />
         </Button>
+      )}
+
+      {duration && (
+        <div
+          className="absolute bottom-0 left-0 h-[2px] bg-muted-foreground/30 transition-none"
+          style={{ width: `${progress}%` }}
+        />
       )}
     </div>
   );

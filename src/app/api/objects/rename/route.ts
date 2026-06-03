@@ -3,6 +3,7 @@ import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivity } from "@/lib/db/activity";
 
 interface RenameRequest {
   connectionId: string;
@@ -57,6 +58,17 @@ export const POST = withAuth(async (req, { user }) => {
     await client.send(
       new DeleteObjectCommand({ Bucket: bucket, Key: sourceKey })
     );
+
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "RENAME",
+      bucket,
+      key: sourceKey,
+      targetKey,
+    });
 
     return NextResponse.json({ success: true, targetKey });
   } catch (error) {

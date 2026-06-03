@@ -29,4 +29,9 @@ export const queryKeys = {
         ? ([...queryKeys.bookmarks.all, "list", connectionId] as const)
         : ([...queryKeys.bookmarks.all, "list"] as const),
   },
+  activity: {
+    all: ["activity"] as const,
+    list: (connectionId: string, bucket: string, prefix?: string, key?: string) =>
+      [...queryKeys.activity.all, connectionId, bucket, prefix ?? "", key ?? ""] as const,
+  },
 };

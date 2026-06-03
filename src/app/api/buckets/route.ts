@@ -6,6 +6,7 @@ import {
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivity } from "@/lib/db/activity";
 
 // POST /api/buckets - List buckets for a connection
 export const POST = withAuth(async (req, { user }) => {
@@ -73,6 +74,15 @@ export const PUT = withAuth(async (req, { user }) => {
     const client = createS3Client(access.connection);
     const command = new CreateBucketCommand({ Bucket: name });
     await client.send(command);
+
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "BUCKET_CREATE",
+      bucket: name,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -8,6 +8,7 @@ import {
   canUploadMonthlyVolume,
   recordUpload,
 } from "@/lib/subscriptions";
+import { recordActivity } from "@/lib/db/activity";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -66,6 +67,17 @@ export const POST = withAuth(async (req, { user }) => {
     });
 
     await client.send(command);
+
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "UPLOAD",
+      bucket,
+      key,
+      byteSize: BigInt(file.size),
+    });
 
     // Record usage
     await recordUpload(user.id, file.size);

@@ -3,6 +3,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivity } from "@/lib/db/activity";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -41,6 +42,17 @@ export const POST = withAuth(async (req, { user }) => {
     });
 
     await client.send(command);
+
+    const folderKey = path.endsWith("/") ? path : path + "/";
+    await recordActivity({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "FOLDER_CREATE",
+      bucket,
+      key: folderKey,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

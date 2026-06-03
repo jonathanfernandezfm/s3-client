@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "./keys";
 import type { S3Object } from "@/types";
+import { useInvalidateActivity } from "./activity";
 
 interface ListObjectsResponse {
   objects: S3Object[];
@@ -102,22 +103,26 @@ export function useObjects(
 
 export function useDeleteObjects(connectionId: string, bucket: string) {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: (keys: string[]) => deleteObjects(connectionId, bucket, keys),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+      invalidateActivity();
     },
   });
 }
 
 export function useCreateFolder(connectionId: string, bucket: string) {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: (path: string) => createFolder(connectionId, bucket, path),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+      invalidateActivity();
     },
   });
 }
@@ -154,24 +159,26 @@ async function moveObjects(params: CopyMoveParams): Promise<CopyMoveResponse> {
 
 export function useCopyObjects() {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: copyObjects,
     onSuccess: () => {
-      // Invalidate all objects queries to refresh both source and target
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+      invalidateActivity();
     },
   });
 }
 
 export function useMoveObjects() {
   const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
 
   return useMutation({
     mutationFn: moveObjects,
     onSuccess: () => {
-      // Invalidate all objects queries to refresh both source and target
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+      invalidateActivity();
     },
   });
 }

@@ -31,7 +31,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Star } from "lucide-react";
+import { Loader2, RefreshCw, Star, History } from "lucide-react";
+import { useActivityDrawerStore } from "@/lib/stores/activity-drawer-store";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import type { S3Object } from "@/types";
 
@@ -69,6 +70,8 @@ export function FileBrowser({
 
   const { getPaneState, clearSelection, dragState, startDrag, endDrag, setViewMode } =
     useBrowserStore();
+  const { open: openActivityDrawer, isOpen: isActivityOpen, setScope: setActivityScope } =
+    useActivityDrawerStore();
   const { addNotification, updateNotification } = useNotificationStore();
   const { data: connections = [] } = useConnections();
   const paneState = getPaneState(paneId);
@@ -77,6 +80,16 @@ export function FileBrowser({
   const canWrite = connection ? connection.role === "ADMIN" : true;
 
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";
+
+  useEffect(() => {
+    if (isActivityOpen) {
+      setActivityScope({
+        connectionId,
+        bucket,
+        prefix: currentPath || undefined,
+      });
+    }
+  }, [isActivityOpen, connectionId, bucket, currentPath, setActivityScope]);
 
   const { data, isFetching, refetch } = useObjects(
     connectionId,
@@ -406,6 +419,20 @@ export function FileBrowser({
             value={paneState.viewMode}
             onChange={(m) => setViewMode(paneId, m)}
           />
+          <Button
+            variant="outline"
+            size="icon"
+            title="Activity"
+            onClick={() =>
+              openActivityDrawer({
+                connectionId,
+                bucket,
+                prefix: currentPath || undefined,
+              })
+            }
+          >
+            <History className="h-4 w-4" />
+          </Button>
           <UploadButton
             connectionId={connectionId}
             bucket={bucket}

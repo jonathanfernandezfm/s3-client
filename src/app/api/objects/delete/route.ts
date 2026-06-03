@@ -3,6 +3,7 @@ import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
+import { recordActivityBatch } from "@/lib/db/activity";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -44,6 +45,16 @@ export const POST = withAuth(async (req, { user }) => {
     });
 
     await client.send(command);
+
+    await recordActivityBatch({
+      connectionId,
+      userId: user.id,
+      userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+      userImageUrl: user.imageUrl ?? null,
+      action: "DELETE",
+      bucket,
+      items: keys.map((k) => ({ key: k })),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
