@@ -19,9 +19,9 @@ export default function AuthLayout({
 
         {/* Logo */}
         <div className="flex items-center gap-3 relative z-10">
-          <Image src="/logo.png" alt="S3 Hub" width={40} height={40} className="invert" />
+          <Image src="/logo.png" alt="S3 Dock" width={40} height={40} className="invert" />
           <span className="font-bold text-2xl text-white">
-            S3 Hub
+            S3 Dock
           </span>
         </div>
 

@@ -19,7 +19,7 @@ export async function listBookmarks(
   const bookmarks = await prisma.bookmark.findMany({
     where,
     include: { connection: { select: { name: true, endpoint: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 
   const results: BookmarkResponse[] = [];
@@ -92,6 +92,30 @@ export async function deleteBookmark(
   }
 
   await prisma.bookmark.delete({ where: { id: bookmarkId } });
+
+  return true;
+}
+
+export async function reorderBookmarks(
+  userId: string,
+  ids: string[]
+): Promise<boolean> {
+  if (ids.length === 0) {
+    return false;
+  }
+
+  const existing = await prisma.bookmark.findMany({ where: { userId } });
+  const ownedIds = new Set(existing.map((bm) => bm.id));
+
+  if (ids.some((id) => !ownedIds.has(id))) {
+    return false;
+  }
+
+  const updates = ids.map((id, index) =>
+    prisma.bookmark.update({ where: { id }, data: { sortOrder: index } })
+  );
+
+  await prisma.$transaction(updates);
 
   return true;
 }

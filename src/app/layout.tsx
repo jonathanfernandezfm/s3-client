@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "S3 Hub",
+  title: "S3 Dock",
   description: "A modern web UI for managing S3-compatible storage",
 };
 

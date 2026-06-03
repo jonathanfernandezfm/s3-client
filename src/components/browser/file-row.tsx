@@ -36,7 +36,7 @@ interface FileRowProps {
   currentPath: string;
   canWrite?: boolean;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (mods: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void;
   onDelete: () => void;
   onPreview: () => void;
   onDownload: () => void;
@@ -122,12 +122,23 @@ export function FileRow({
       {...dragHandlers}
       {...(folderDropHandlers ?? {})}
       style={{ cursor: "grab" }}
+      onClickCapture={(e) => {
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+        }
+      }}
     >
       <TableCell className="w-8">
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={onSelect}
+          onChange={() => {}}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+          }}
           className="h-4 w-4 rounded border-gray-300"
         />
       </TableCell>

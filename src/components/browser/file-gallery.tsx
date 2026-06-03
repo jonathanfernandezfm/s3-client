@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FileTile } from "./file-tile";
 import { usePresignedUrls } from "@/lib/queries/presign";
 import { useBrowserStore } from "@/lib/stores/browser-store";
+import { usePaneSelection } from "./use-pane-selection";
+import { usePaneKeyboard } from "./use-pane-keyboard";
 import { isImageFile, cn } from "@/lib/utils";
 import type { S3Object } from "@/types";
 
@@ -54,17 +56,40 @@ export function FileGallery({
   onDragEnd,
   folderNoteCounts = {},
 }: FileGalleryProps) {
-  const { getPaneState, toggleSelection } = useBrowserStore();
+  const getPaneState = useBrowserStore((s) => s.getPaneState);
   const paneState = getPaneState(paneId);
   const selectedItems = paneState.selectedItems;
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
 
-  const folderObjects = objects.filter((o) => o.isFolder);
-  const imageObjects = objects.filter((o) => !o.isFolder && isImageFile(o.key));
-  const otherObjects = objects.filter((o) => !o.isFolder && !isImageFile(o.key));
+  const folderObjects = useMemo(() => objects.filter((o) => o.isFolder), [objects]);
+  const imageObjects = useMemo(
+    () => objects.filter((o) => !o.isFolder && isImageFile(o.key)),
+    [objects]
+  );
+  const otherObjects = useMemo(
+    () => objects.filter((o) => !o.isFolder && !isImageFile(o.key)),
+    [objects]
+  );
 
   const imageKeys = useMemo(() => imageObjects.map((o) => o.key), [imageObjects]);
   const thumbnailUrls = usePresignedUrls(connectionId, bucket, imageKeys);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const orderedKeys = useMemo(
+    () => [
+      ...folderObjects.map((o) => o.key),
+      ...imageObjects.map((o) => o.key),
+      ...otherObjects.map((o) => o.key),
+    ],
+    [folderObjects, imageObjects, otherObjects]
+  );
+  const { handleSelect, selectAllInPane, clearSelectionInPane } =
+    usePaneSelection(paneId, orderedKeys);
+  usePaneKeyboard({
+    containerRef,
+    onSelectAll: selectAllInPane,
+    onClearSelection: clearSelectionInPane,
+  });
 
 
   const handleFolderDrop = (targetFolderKey: string, operation: "copy" | "move") => {
@@ -114,8 +139,10 @@ export function FileGallery({
   if (objects.length === 0 && !isLoading) {
     return (
       <div
+        ref={containerRef}
+        tabIndex={0}
         className={cn(
-          "flex flex-col items-center justify-center flex-1 min-h-[200px] py-12 text-center transition-colors",
+          "flex flex-col items-center justify-center flex-1 min-h-[200px] py-12 text-center transition-colors outline-none",
           isGalleryDragOver && isValidDropTarget && "bg-blue-50 dark:bg-blue-950"
         )}
         onDragOver={handleDragOver}
@@ -131,8 +158,10 @@ export function FileGallery({
 
   return (
     <div
+      ref={containerRef}
+      tabIndex={0}
       className={cn(
-        "flex flex-col flex-1 min-h-[200px] transition-colors",
+        "flex flex-col flex-1 min-h-[200px] transition-colors outline-none",
         isGalleryDragOver &&
           isValidDropTarget &&
           "ring-2 ring-blue-500 ring-inset bg-blue-50/50 dark:bg-blue-950/50"
@@ -151,7 +180,7 @@ export function FileGallery({
             currentPath={currentPath}
             canWrite={canWrite}
             isSelected={selectedItems.has(object.key)}
-            onSelect={() => toggleSelection(paneId, object.key)}
+            onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
             onNavigate={onNavigate}
             paneId={paneId}
@@ -174,7 +203,7 @@ export function FileGallery({
             currentPath={currentPath}
             canWrite={canWrite}
             isSelected={selectedItems.has(object.key)}
-            onSelect={() => toggleSelection(paneId, object.key)}
+            onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
             onNavigate={onNavigate}
             thumbnailUrl={thumbnailUrls[object.key]}
@@ -197,7 +226,7 @@ export function FileGallery({
             currentPath={currentPath}
             canWrite={canWrite}
             isSelected={selectedItems.has(object.key)}
-            onSelect={() => toggleSelection(paneId, object.key)}
+            onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
             onNavigate={onNavigate}
             paneId={paneId}

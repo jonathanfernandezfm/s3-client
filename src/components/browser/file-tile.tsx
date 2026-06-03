@@ -22,7 +22,7 @@ interface FileTileProps {
   currentPath: string;
   canWrite?: boolean;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (mods: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void;
   onPreview: () => void;
   onNavigate?: (path: string) => void;
   thumbnailUrl?: string;
@@ -88,11 +88,22 @@ export function FileTile({
         onDragEnd={dragHandlers.onDragEnd}
         {...(folderDropHandlers ?? {})}
         style={{ cursor: "grab" }}
+        onClickCapture={(e) => {
+          if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+          }
+        }}
       >
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={onSelect}
+          onChange={() => {}}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+          }}
           data-selected={isSelected}
           className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
         />
@@ -141,11 +152,22 @@ export function FileTile({
       onDragEnd={dragHandlers.onDragEnd}
       {...(folderDropHandlers ?? {})}
       style={{ cursor: "grab" }}
+      onClickCapture={(e) => {
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+        }
+      }}
     >
       <input
         type="checkbox"
         checked={isSelected}
-        onChange={onSelect}
+        onChange={() => {}}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+        }}
         data-selected={isSelected}
         className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
       />

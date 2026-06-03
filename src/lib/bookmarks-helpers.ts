@@ -56,3 +56,18 @@ export function getPrefixBookmarks(
       bm.prefix !== null
   );
 }
+
+export function reorderBucketPins(
+  bookmarks: BookmarkResponse[],
+  orderedIds: string[]
+): BookmarkResponse[] {
+  const pinIndex = new Map(orderedIds.map((id, i) => [id, i]));
+  const bucketPins = bookmarks.filter((bm) => bm.prefix === null);
+  const prefixPins = bookmarks.filter((bm) => bm.prefix !== null);
+  const sorted = [...bucketPins].sort((a, b) => {
+    const ai = pinIndex.get(a.id) ?? Infinity;
+    const bi = pinIndex.get(b.id) ?? Infinity;
+    return ai - bi;
+  });
+  return [...sorted, ...prefixPins];
+}

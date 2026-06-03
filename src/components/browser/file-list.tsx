@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/table";
 import { FileRow } from "./file-row";
 import { useBrowserStore } from "@/lib/stores/browser-store";
+import { usePaneSelection } from "./use-pane-selection";
+import { usePaneKeyboard } from "./use-pane-keyboard";
 import { cn } from "@/lib/utils";
 import type { S3Object } from "@/types";
 
@@ -63,12 +65,21 @@ export function FileList({
   onDragEnd,
   folderNoteCounts = {},
 }: FileListProps) {
-  const { getPaneState, toggleSelection, selectAll, clearSelection } =
-    useBrowserStore();
+  const getPaneState = useBrowserStore((s) => s.getPaneState);
 
   const paneState = getPaneState(paneId);
   const selectedItems = paneState.selectedItems;
   const [isListDragOver, setIsListDragOver] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const orderedKeys = useMemo(() => objects.map((o) => o.key), [objects]);
+  const { handleSelect, selectAllInPane, clearSelectionInPane } =
+    usePaneSelection(paneId, orderedKeys);
+  usePaneKeyboard({
+    containerRef,
+    onSelectAll: selectAllInPane,
+    onClearSelection: clearSelectionInPane,
+  });
 
 
   const allSelected =
@@ -76,9 +87,9 @@ export function FileList({
 
   const handleSelectAll = () => {
     if (allSelected) {
-      clearSelection(paneId);
+      clearSelectionInPane();
     } else {
-      selectAll(paneId, objects.map((o) => o.key));
+      selectAllInPane();
     }
   };
 
@@ -137,8 +148,10 @@ export function FileList({
   if (objects.length === 0 && !isLoading) {
     return (
       <div
+        ref={containerRef}
+        tabIndex={0}
         className={cn(
-          "flex flex-col items-center justify-center flex-1 min-h-[200px] py-12 text-center transition-colors",
+          "flex flex-col items-center justify-center flex-1 min-h-[200px] py-12 text-center transition-colors outline-none",
           isListDragOver && isValidDropTarget && "bg-blue-50 dark:bg-blue-950"
         )}
         onDragOver={handleDragOver}
@@ -156,8 +169,10 @@ export function FileList({
 
   return (
     <div
+      ref={containerRef}
+      tabIndex={0}
       className={cn(
-        "flex flex-col flex-1 min-h-[200px] transition-colors",
+        "flex flex-col flex-1 min-h-[200px] transition-colors outline-none",
         isListDragOver && isValidDropTarget && "ring-2 ring-blue-500 ring-inset bg-blue-50/50 dark:bg-blue-950/50"
       )}
       onDragOver={handleDragOver}
@@ -191,7 +206,7 @@ export function FileList({
             currentPath={currentPath}
             canWrite={canWrite}
             isSelected={selectedItems.has(object.key)}
-              onSelect={() => toggleSelection(paneId, object.key)}
+              onSelect={(mods) => handleSelect(object.key, mods)}
               onDelete={() => onDelete(object.key)}
               onPreview={() => onPreview(object)}
               onDownload={() => onDownload(object.key)}

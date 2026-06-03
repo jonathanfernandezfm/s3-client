@@ -14,7 +14,8 @@ import {
   type ConnectionResponse,
 } from "@/lib/queries/connections";
 import { useNotificationStore } from "@/lib/stores/notification-store";
-import { useBookmarks } from "@/lib/queries/bookmarks";
+import { useBookmarks, useReorderBookmarks } from "@/lib/queries/bookmarks";
+import type { BookmarkResponse } from "@/lib/bookmarks-helpers";
 import { ConnectionForm } from "@/components/connections/connection-form";
 import {
   Dialog,
@@ -45,7 +46,70 @@ import {
   Trash2,
   Loader2,
   Star,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function PinnedBucketItem({
+  pin,
+  isOverlay,
+  onClick,
+  onMiddleClick,
+}: {
+  pin: BookmarkResponse;
+  isOverlay?: boolean;
+  onClick?: () => void;
+  onMiddleClick?: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: pin.id, disabled: isOverlay });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      type="button"
+      onClick={onClick}
+      onMouseDown={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          onMiddleClick?.();
+        }
+      }}
+      className="group flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground text-sm"
+    >
+      <span className="relative size-3.5 shrink-0" {...listeners} {...attributes}>
+        <Database className="size-3.5 text-muted-foreground absolute inset-0 transition-opacity opacity-100 group-hover:opacity-0" />
+        <GripVertical className="size-3.5 text-muted-foreground absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100 cursor-grab" />
+      </span>
+      <div className="min-w-0">
+        <div className="truncate font-medium">{pin.bucket}</div>
+        <div className="truncate text-xs text-muted-foreground">{pin.connectionName}</div>
+      </div>
+    </button>
+  );
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -59,6 +123,28 @@ export function AppSidebar() {
   const { data: allBookmarks = [] } = useBookmarks();
 
   const bucketPins = allBookmarks.filter((bm) => bm.prefix === null);
+
+  const reorderBookmarks = useReorderBookmarks();
+  const [activePin, setActivePin] = useState<BookmarkResponse | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: { distance: 5 },
+  }));
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const pin = bucketPins.find((p) => p.id === event.active.id);
+    setActivePin(pin ?? null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActivePin(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = bucketPins.findIndex((p) => p.id === active.id);
+    const newIndex = bucketPins.findIndex((p) => p.id === over.id);
+    const reordered = arrayMove(bucketPins, oldIndex, newIndex);
+    reorderBookmarks.mutate(reordered.map((p) => p.id));
+  };
 
   const [editingConnection, setEditingConnection] =
     useState<ConnectionResponse | null>(null);
@@ -147,8 +233,8 @@ export function AppSidebar() {
             className="flex items-center gap-2"
             onClick={handleBucketsClick}
           >
-            <Image src="/logo.png" alt="S3 Hub" width={28} height={28} className="shrink-0" />
-            <span className="font-semibold text-lg">S3 Hub</span>
+            <Image src="/logo.png" alt="S3 Dock" width={28} height={28} className="shrink-0" />
+            <span className="font-semibold text-lg">S3 Dock</span>
           </Link>
         </div>
 
@@ -186,26 +272,30 @@ export function AppSidebar() {
                 Pinned
               </p>
               <div className="space-y-0.5">
-                {bucketPins.map((bm) => (
-                  <button
-                    key={bm.id}
-                    type="button"
-                    onClick={() => handlePinnedBucketClick(bm.connectionId, bm.connectionName, bm.bucket)}
-                    onMouseDown={(e) => {
-                      if (e.button === 1) {
-                        e.preventDefault();
-                        handlePinnedBucketMiddleClick(bm.connectionId, bm.connectionName, bm.bucket);
-                      }
-                    }}
-                    className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground text-sm"
+                <DndContext
+                  sensors={sensors}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={bucketPins.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <Database className="size-3.5 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{bm.bucket}</div>
-                      <div className="truncate text-xs text-muted-foreground">{bm.connectionName}</div>
-                    </div>
-                  </button>
-                ))}
+                    {bucketPins.map((bm) => (
+                      <PinnedBucketItem
+                        key={bm.id}
+                        pin={bm}
+                        onClick={() => handlePinnedBucketClick(bm.connectionId, bm.connectionName, bm.bucket)}
+                        onMiddleClick={() => handlePinnedBucketMiddleClick(bm.connectionId, bm.connectionName, bm.bucket)}
+                      />
+                    ))}
+                  </SortableContext>
+                  <DragOverlay>
+                    {activePin ? (
+                      <PinnedBucketItem pin={activePin} isOverlay />
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               </div>
             </div>
           )}

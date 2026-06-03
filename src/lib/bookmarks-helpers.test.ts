@@ -5,6 +5,7 @@ import {
   findBookmark,
   getBucketBookmarks,
   getPrefixBookmarks,
+  reorderBucketPins,
   type BookmarkResponse,
 } from "./bookmarks-helpers";
 
@@ -132,5 +133,37 @@ describe("getPrefixBookmarks", () => {
       bookmark({ connectionId: "conn-1", bucket: "media-prod", prefix: null }),
     ];
     expect(getPrefixBookmarks(bookmarks, "conn-1", "media-prod")).toHaveLength(0);
+  });
+});
+
+describe("reorderBucketPins", () => {
+  test("reorders bucket pins to match the provided ID order", () => {
+    const bookmarks = [
+      bookmark({ id: "b1", prefix: null }),
+      bookmark({ id: "b2", prefix: null }),
+      bookmark({ id: "b3", prefix: null }),
+    ];
+    const result = reorderBucketPins(bookmarks, ["b3", "b1", "b2"]);
+    expect(result.map((b) => b.id)).toEqual(["b3", "b1", "b2"]);
+  });
+
+  test("places prefix bookmarks after bucket pins", () => {
+    const bookmarks = [
+      bookmark({ id: "b1", prefix: null }),
+      bookmark({ id: "p1", prefix: "folder/" }),
+      bookmark({ id: "b2", prefix: null }),
+    ];
+    const result = reorderBucketPins(bookmarks, ["b2", "b1"]);
+    expect(result.map((b) => b.id)).toEqual(["b2", "b1", "p1"]);
+  });
+
+  test("preserves relative order of prefix bookmarks", () => {
+    const bookmarks = [
+      bookmark({ id: "b1", prefix: null }),
+      bookmark({ id: "p1", prefix: "alpha/" }),
+      bookmark({ id: "p2", prefix: "beta/" }),
+    ];
+    const result = reorderBucketPins(bookmarks, ["b1"]);
+    expect(result.map((b) => b.id)).toEqual(["b1", "p1", "p2"]);
   });
 });

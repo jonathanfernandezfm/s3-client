@@ -6,7 +6,7 @@ export default function SignUpPage() {
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
         <p className="text-muted-foreground">
-          Get started with S3 Hub today
+          Get started with S3 Dock today
         </p>
       </div>
       <SignUp

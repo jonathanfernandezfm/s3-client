@@ -225,6 +225,7 @@ model Bookmark {
   bucket       String
   prefix       String?
   label        String?
+  sortOrder    Int        @default(0)
   createdAt    DateTime   @default(now())
 
   @@unique([userId, connectionId, bucket, prefix])

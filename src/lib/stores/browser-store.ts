@@ -3,6 +3,7 @@ import type { S3Object } from "@/types";
 
 interface PaneBrowserState {
   selectedItems: Set<string>;
+  selectionAnchor: string | null;
   viewMode: "list" | "grid";
   sortBy: "name" | "size" | "date";
   sortOrder: "asc" | "desc";
@@ -20,6 +21,7 @@ export interface DragState {
 function createDefaultPaneState(): PaneBrowserState {
   return {
     selectedItems: new Set(),
+    selectionAnchor: null,
     viewMode: "list",
     sortBy: "name",
     sortOrder: "asc",
@@ -37,6 +39,7 @@ interface BrowserState {
 
   // Selection actions (scoped to pane)
   toggleSelection: (paneId: string, key: string) => void;
+  setSelectionRange: (paneId: string, keys: string[], anchor: string | null) => void;
   selectAll: (paneId: string, keys: string[]) => void;
   clearSelection: (paneId: string) => void;
 
@@ -106,7 +109,27 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       return {
         paneStates: {
           ...state.paneStates,
-          [paneId]: { ...paneState, selectedItems: newSelection },
+          [paneId]: {
+            ...paneState,
+            selectedItems: newSelection,
+            selectionAnchor: key,
+          },
+        },
+      };
+    });
+  },
+
+  setSelectionRange: (paneId, keys, anchor) => {
+    set((state) => {
+      const paneState = state.paneStates[paneId] || createDefaultPaneState();
+      return {
+        paneStates: {
+          ...state.paneStates,
+          [paneId]: {
+            ...paneState,
+            selectedItems: new Set(keys),
+            selectionAnchor: anchor,
+          },
         },
       };
     });
@@ -118,7 +141,11 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       return {
         paneStates: {
           ...state.paneStates,
-          [paneId]: { ...paneState, selectedItems: new Set(keys) },
+          [paneId]: {
+            ...paneState,
+            selectedItems: new Set(keys),
+            selectionAnchor: keys[0] ?? null,
+          },
         },
       };
     });
@@ -130,7 +157,11 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       return {
         paneStates: {
           ...state.paneStates,
-          [paneId]: { ...paneState, selectedItems: new Set() },
+          [paneId]: {
+            ...paneState,
+            selectedItems: new Set(),
+            selectionAnchor: null,
+          },
         },
       };
     });
