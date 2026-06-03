@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLayoutStore } from "@/lib/stores/layout-store";
 import { useConnections } from "@/lib/queries/connections";
@@ -14,17 +14,22 @@ interface BrowserRedirectProps {
 
 export function BrowserRedirect({ connectionId, bucket, path = [] }: BrowserRedirectProps) {
   const router = useRouter();
-  const { panes, focusedPaneId, addTab, setActiveTab, updateTabPath } = useLayoutStore();
+  const { addTab, setActiveTab, updateTabPath } = useLayoutStore();
   const { data: connections } = useConnections();
+  const didRedirect = useRef(false);
 
   useEffect(() => {
+    if (didRedirect.current || !connections) return;
+    didRedirect.current = true;
+
     const pathString = path.length > 0 ? path.join("/") + "/" : "";
-    const connection = connections?.find((c) => c.id === connectionId);
+    const connection = connections.find((c) => c.id === connectionId);
     const connectionName = connection?.name || connection?.endpoint || "";
 
-    // Find an existing tab for this bucket across all panes
-    let existingTabInfo: { paneId: string; tabId: string } | null = null;
+    // Read panes snapshot without subscribing — avoids re-render loop
+    const { panes, focusedPaneId } = useLayoutStore.getState();
 
+    let existingTabInfo: { paneId: string; tabId: string } | null = null;
     for (const [paneId, pane] of Object.entries(panes)) {
       const existingTab = pane.tabs.find(
         (t) =>
@@ -39,11 +44,9 @@ export function BrowserRedirect({ connectionId, bucket, path = [] }: BrowserRedi
     }
 
     if (existingTabInfo) {
-      // Update the path of the existing tab and switch to it
       updateTabPath(existingTabInfo.paneId, existingTabInfo.tabId, pathString);
       setActiveTab(existingTabInfo.paneId, existingTabInfo.tabId);
     } else {
-      // Add a new tab to the focused pane
       const targetPaneId = focusedPaneId || Object.keys(panes)[0];
       if (targetPaneId) {
         addTab(targetPaneId, {
@@ -56,9 +59,8 @@ export function BrowserRedirect({ connectionId, bucket, path = [] }: BrowserRedi
       }
     }
 
-    // Redirect to buckets page where tabs are displayed
     router.replace("/buckets");
-  }, [connectionId, bucket, path, connections, panes, focusedPaneId, addTab, setActiveTab, updateTabPath, router]);
+  }, [connections, connectionId, bucket, path, addTab, setActiveTab, updateTabPath, router]);
 
   return (
     <div className="flex items-center justify-center py-12">

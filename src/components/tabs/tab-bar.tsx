@@ -45,6 +45,15 @@ function TabItem({ tab, isActive, paneId }: TabItemProps) {
           : "bg-muted/40 hover:bg-muted/70 border border-b-0 border-transparent"
       )}
       onClick={() => setActiveTab(paneId, tab.id)}
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
+      onAuxClick={(e) => {
+        if (e.button !== 1) return;
+        e.preventDefault();
+        e.stopPropagation();
+        removeTab(paneId, tab.id);
+      }}
     >
       {isActive && (
         <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
