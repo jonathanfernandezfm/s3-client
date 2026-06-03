@@ -34,7 +34,6 @@ interface FileGalleryProps {
   isValidDropTarget?: boolean;
   onDragStart?: (items: S3Object[]) => void;
   onDragEnd?: () => void;
-  noteCounts?: Record<string, number>;
 }
 
 export function FileGallery({
@@ -52,7 +51,6 @@ export function FileGallery({
   isValidDropTarget,
   onDragStart,
   onDragEnd,
-  noteCounts = {},
 }: FileGalleryProps) {
   const { getPaneState, toggleSelection } = useBrowserStore();
   const paneState = getPaneState(paneId);
@@ -162,7 +160,6 @@ export function FileGallery({
             onFolderDrop={handleFolderDrop}
             isDragging={isDragging}
             canDropOnFolder={isValidDropTarget && canWrite}
-            noteCount={noteCounts[object.key] ?? 0}
           />
         ))}
         {imageObjects.map((object) => (
@@ -186,7 +183,6 @@ export function FileGallery({
             onFolderDrop={handleFolderDrop}
             isDragging={isDragging}
             canDropOnFolder={isValidDropTarget && canWrite}
-            noteCount={noteCounts[object.key] ?? 0}
           />
         ))}
         {otherObjects.map((object) => (
@@ -209,7 +205,6 @@ export function FileGallery({
             onFolderDrop={handleFolderDrop}
             isDragging={isDragging}
             canDropOnFolder={isValidDropTarget && canWrite}
-            noteCount={noteCounts[object.key] ?? 0}
           />
         ))}
       </div>

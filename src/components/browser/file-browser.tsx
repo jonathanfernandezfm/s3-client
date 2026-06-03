@@ -33,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Star, History, MessageSquare } from "lucide-react";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
-import { useNoteCounts } from "@/lib/queries/notes";
+import { useNotesForKey } from "@/lib/queries/notes";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import type { S3Object } from "@/types";
 
@@ -84,17 +84,12 @@ export function FileBrowser({
 
   useEffect(() => {
     if (!isInfoOpen) return;
-    if (selectedItems.size === 1) {
-      const onlyKey = Array.from(selectedItems)[0];
-      setInfoScope({ connectionId, bucket, objectKey: onlyKey });
-    } else {
-      setInfoScope({
-        connectionId,
-        bucket,
-        prefix: currentPath || undefined,
-      });
-    }
-  }, [isInfoOpen, selectedItems, connectionId, bucket, currentPath, setInfoScope]);
+    setInfoScope({
+      connectionId,
+      bucket,
+      prefix: currentPath || undefined,
+    });
+  }, [isInfoOpen, connectionId, bucket, currentPath, setInfoScope]);
 
   const { data, isPending, refetch } = useObjects(
     connectionId,
@@ -105,18 +100,12 @@ export function FileBrowser({
   const copyObjects = useCopyObjects();
   const moveObjects = useMoveObjects();
 
-  const noteCountsQuery = useNoteCounts({
+  const folderNotesQuery = useNotesForKey({
     connectionId,
     bucket,
-    keys: (data?.objects ?? []).map((o) => o.key),
+    key: currentPath,
   });
-  const noteCounts = noteCountsQuery.data ?? {};
-
-  const singleSelectedKey =
-    selectedItems.size === 1 ? Array.from(selectedItems)[0] : null;
-  const noteButtonCount = singleSelectedKey
-    ? (noteCounts[singleSelectedKey] ?? 0)
-    : 0;
+  const noteButtonCount = folderNotesQuery.data?.length ?? 0;
 
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
 
@@ -515,7 +504,6 @@ export function FileBrowser({
               isValidDropTarget={isValidDropTarget}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              noteCounts={noteCounts}
             />
           ) : (
             <FileList
@@ -535,7 +523,6 @@ export function FileBrowser({
               isValidDropTarget={isValidDropTarget}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              noteCounts={noteCounts}
             />
           )}
         </div>

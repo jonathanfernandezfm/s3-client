@@ -288,8 +288,7 @@ export function NotesTab() {
   const { scope } = useInfoDrawerStore();
 
   const noteKey =
-    scope?.objectKey ??
-    (scope?.prefix && scope.prefix.length > 0 ? scope.prefix : null);
+    scope?.prefix && scope.prefix.length > 0 ? scope.prefix : null;
 
   const enabled =
     !!scope?.connectionId && !!scope?.bucket && !!noteKey;
@@ -304,7 +303,7 @@ export function NotesTab() {
     return (
       <div className="flex-1 flex items-center justify-center px-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Select a file or folder to see notes
+          Navigate into a folder to add notes
         </p>
       </div>
     );

@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Folder, FileImage, FileText, File, Loader2, MessageSquare } from "lucide-react";
+import { Folder, FileImage, FileText, File, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
-import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import type { S3Object } from "@/types";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
@@ -35,7 +34,6 @@ interface FileTileProps {
   onFolderDrop?: (targetFolderKey: string, operation: "copy" | "move") => void;
   isDragging?: boolean;
   canDropOnFolder?: boolean;
-  noteCount?: number;
 }
 
 export function FileTile({
@@ -56,18 +54,9 @@ export function FileTile({
   onFolderDrop,
   isDragging,
   canDropOnFolder,
-  noteCount = 0,
 }: FileTileProps) {
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
-  const { open: openInfoDrawer, setScope: setInfoScope } = useInfoDrawerStore();
-
-  function openNotes(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setInfoScope({ connectionId, bucket, objectKey: object.key });
-    openInfoDrawer("notes");
-  }
 
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, fileName } =
     useFileItemBehavior({
@@ -105,20 +94,6 @@ export function FileTile({
           data-selected={isSelected}
           className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
         />
-        <button
-          type="button"
-          onClick={openNotes}
-          title={noteCount > 0 ? `${noteCount} note${noteCount === 1 ? "" : "s"} — click to view` : "Add a note"}
-          className={cn(
-            "absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 text-xs bg-background/90 backdrop-blur-sm rounded px-1.5 py-0.5 border border-border text-foreground transition-opacity",
-            noteCount > 0
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100"
-          )}
-        >
-          <MessageSquare className="h-3 w-3" />
-          {noteCount > 0 && noteCount}
-        </button>
         <Link
           href={`/browser/${connectionId}/${bucket}/${object.key}`}
           onClick={(e) => {
@@ -163,20 +138,6 @@ export function FileTile({
         data-selected={isSelected}
         className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
       />
-      <button
-        type="button"
-        onClick={openNotes}
-        title={noteCount > 0 ? `${noteCount} note${noteCount === 1 ? "" : "s"} — click to view` : "Add a note"}
-        className={cn(
-          "absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 text-xs bg-background/90 backdrop-blur-sm rounded px-1.5 py-0.5 border border-border text-foreground transition-opacity",
-          noteCount > 0
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100"
-        )}
-      >
-        <MessageSquare className="h-3 w-3" />
-        {noteCount > 0 && noteCount}
-      </button>
       <div
         className="aspect-square rounded-md border bg-muted overflow-hidden relative flex items-center justify-center cursor-pointer"
         onClick={onPreview}

@@ -21,13 +21,11 @@ import {
   Trash2,
   Eye,
   Star,
-  MessageSquare,
 } from "lucide-react";
 import { formatBytes, formatDate, getFileExtension, isImageFile, cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
-import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import type { S3Object } from "@/types";
 
 interface FileRowProps {
@@ -51,7 +49,6 @@ interface FileRowProps {
   onFolderDrop?: (targetFolderKey: string, operation: "copy" | "move") => void;
   isDragging?: boolean;
   canDropOnFolder?: boolean;
-  noteCount?: number;
 }
 
 function getFileIcon(key: string, isFolder: boolean) {
@@ -88,9 +85,7 @@ export function FileRow({
   onFolderDrop,
   isDragging,
   canDropOnFolder,
-  noteCount = 0,
 }: FileRowProps) {
-  const { open: openInfoDrawer, setScope: setInfoScope } = useInfoDrawerStore();
   const Icon = getFileIcon(object.key, object.isFolder);
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, canPreview, fileName } = useFileItemBehavior({
     object, paneId, connectionId, bucket, currentPath,
@@ -169,15 +164,6 @@ export function FileRow({
               </button>
             );
           })()}
-          {noteCount > 0 && (
-            <span
-              className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-muted-foreground"
-              title={`${noteCount} note${noteCount === 1 ? "" : "s"}`}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              {noteCount}
-            </span>
-          )}
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground">
@@ -201,18 +187,6 @@ export function FileRow({
                   Preview
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={() => {
-                  setInfoScope({ connectionId, bucket, objectKey: object.key });
-                  openInfoDrawer("notes");
-                }}
-              >
-                <MessageSquare className="h-4 w-4" />
-                Notes
-                {noteCount > 0 && (
-                  <span className="ml-auto text-xs text-muted-foreground">{noteCount}</span>
-                )}
-              </DropdownMenuItem>
               {!object.isFolder && (
                 <DropdownMenuItem onClick={onDownload}>
                   <Download className="h-4 w-4" />
