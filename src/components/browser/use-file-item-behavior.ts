@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createDragPreview, removeDragPreview } from "./drag-preview";
-import { isImageFile } from "@/lib/utils";
+import { getPreviewKind } from "@/lib/utils";
 import type { S3Object } from "@/types";
 
 export function useFileItemBehavior({
@@ -114,7 +114,7 @@ export function useFileItemBehavior({
     return name.endsWith("/") ? name.slice(0, -1) : name;
   })();
 
-  const canPreview = isImageFile(object.key);
+  const canPreview = getPreviewKind(object.key) !== null;
 
   return {
     dragHandlers: {

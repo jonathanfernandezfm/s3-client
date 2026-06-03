@@ -322,21 +322,29 @@ export function FileBrowser({
     if (!canWrite) return;
     if (!deletingKey) return;
 
+    const keyToDelete = deletingKey;
+    const itemName = keyToDelete.split("/").filter(Boolean).pop() || keyToDelete;
+    setDeletingKey(null);
+
+    const notifId = addNotification({
+      type: "delete",
+      title: "Deleting...",
+      description: itemName,
+      status: "in-progress",
+    });
+
     try {
-      await deleteObjects.mutateAsync([deletingKey]);
-      addNotification({
-        type: "delete",
-        title: "Deleted",
-        description: "Successfully deleted the item",
+      await deleteObjects.mutateAsync([keyToDelete]);
+      updateNotification(notifId, {
         status: "completed",
+        title: "Deleted",
+        description: `Successfully deleted ${itemName}`,
       });
-      setDeletingKey(null);
     } catch (error) {
-      addNotification({
-        type: "delete",
+      updateNotification(notifId, {
+        status: "error",
         title: "Failed to delete",
         error: error instanceof Error ? error.message : "Unknown error",
-        status: "error",
       });
     }
   };
@@ -506,7 +514,7 @@ export function FileBrowser({
 
       <DeleteConfirmDialog
         isOpen={!!deletingKey}
-        itemName={deletingKey?.split("/").pop() || ""}
+        itemName={deletingKey?.split("/").filter(Boolean).pop() || ""}
         onClose={() => setDeletingKey(null)}
         onConfirm={confirmDelete}
         isDeleting={deleteObjects.isPending}

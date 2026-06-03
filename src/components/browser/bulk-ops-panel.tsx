@@ -57,7 +57,7 @@ export function BulkOpsPanel({
     finishProgress,
     dismissProgress,
   } = useBulkOpsStore();
-  const { addNotification } = useNotificationStore();
+  const { addNotification, updateNotification } = useNotificationStore();
   const invalidateObjects = useInvalidateObjects();
 
   const selection: S3Object[] = objects.filter((o) => selectedItems.has(o.key));
@@ -73,6 +73,15 @@ export function BulkOpsPanel({
       keyOf: (item: T) => string,
       action: (item: T) => Promise<void>
     ) => {
+      const notifId =
+        kind === "delete"
+          ? addNotification({
+              type: "delete",
+              title: `Deleting ${items.length} item${items.length !== 1 ? "s" : ""}...`,
+              status: "in-progress",
+            })
+          : null;
+
       startProgress(kind, paneId, items.length);
       for (const item of items) {
         if (useBulkOpsStore.getState().progress?.cancelRequested) break;
@@ -95,14 +104,24 @@ export function BulkOpsPanel({
         const ok = finalState.completed - finalState.failures.length;
         const verb =
           kind === "rename" ? "Renamed" : kind === "tag" ? "Tagged" : "Deleted";
-        addNotification({
-          type: kind === "rename" ? "info" : kind === "tag" ? "info" : "delete",
-          title:
-            finalState.failures.length === 0
-              ? `${verb} ${ok} item${ok !== 1 ? "s" : ""}`
-              : `${kind} finished with ${finalState.failures.length} error${finalState.failures.length !== 1 ? "s" : ""}`,
-          status: finalState.failures.length === 0 ? "completed" : "error",
-        });
+        if (notifId) {
+          updateNotification(notifId, {
+            status: finalState.failures.length === 0 ? "completed" : "error",
+            title:
+              finalState.failures.length === 0
+                ? `Deleted ${ok} item${ok !== 1 ? "s" : ""}`
+                : `Delete finished with ${finalState.failures.length} error${finalState.failures.length !== 1 ? "s" : ""}`,
+          });
+        } else {
+          addNotification({
+            type: kind === "rename" ? "info" : "info",
+            title:
+              finalState.failures.length === 0
+                ? `${verb} ${ok} item${ok !== 1 ? "s" : ""}`
+                : `${kind} finished with ${finalState.failures.length} error${finalState.failures.length !== 1 ? "s" : ""}`,
+            status: finalState.failures.length === 0 ? "completed" : "error",
+          });
+        }
       }
       if (finalState && finalState.failures.length === 0) {
         clearSelection(paneId);
@@ -117,6 +136,7 @@ export function BulkOpsPanel({
       finishProgress,
       invalidateObjects,
       addNotification,
+      updateNotification,
       clearSelection,
     ]
   );
@@ -211,7 +231,7 @@ export function BulkOpsPanel({
         </div>
       )}
 
-      {showProgress && progress && (
+      {showProgress && progress && progress.kind !== "delete" && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[min(560px,90vw)] p-3 rounded-xl border bg-card shadow-lg">
           <div className="flex items-center gap-3">
             {progress.finishedAt ? (

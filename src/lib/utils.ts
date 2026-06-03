@@ -33,7 +33,31 @@ export function getFileExtension(filename: string): string {
   return ext ? ext.toLowerCase() : "";
 }
 
+const PREVIEW_EXTENSIONS = {
+  image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'],
+  pdf:   ['pdf'],
+  video: ['mp4', 'webm', 'mov', 'm4v', 'ogv'],
+  audio: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
+  text:  [
+    'txt', 'md', 'log', 'json', 'yaml', 'yml', 'xml', 'csv', 'tsv', 'toml', 'ini',
+    'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'py', 'rb', 'go', 'rs', 'java', 'kt',
+    'c', 'h', 'cpp', 'hpp', 'cs', 'php', 'swift', 'sh', 'bash', 'zsh', 'sql',
+    'html', 'htm', 'css', 'scss', 'sass', 'less', 'env', 'gitignore', 'dockerfile',
+  ],
+} as const;
+
+export type PreviewKind = keyof typeof PREVIEW_EXTENSIONS;
+
+export function getPreviewKind(filename: string): PreviewKind | null {
+  const ext = getFileExtension(filename);
+  for (const kind in PREVIEW_EXTENSIONS) {
+    if ((PREVIEW_EXTENSIONS[kind as PreviewKind] as readonly string[]).includes(ext)) {
+      return kind as PreviewKind;
+    }
+  }
+  return null;
+}
+
 export function isImageFile(filename: string): boolean {
-  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"];
-  return imageExtensions.includes(getFileExtension(filename));
+  return getPreviewKind(filename) === 'image';
 }
