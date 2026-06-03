@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Folder, FileImage, FileText, File, Loader2, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
-import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import type { S3Object } from "@/types";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
@@ -60,7 +59,6 @@ export function FileTile({
 }: FileTileProps) {
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
-  const { open: openInfoDrawer, setScope: setInfoScope } = useInfoDrawerStore();
 
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, fileName } =
     useFileItemBehavior({
@@ -119,20 +117,13 @@ export function FileTile({
         <div className="mt-2 flex items-center gap-1 min-w-0">
           <span className="text-sm truncate" title={fileName}>{fileName}</span>
           {noteCount > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setInfoScope({ connectionId, bucket, prefix: object.key });
-                openInfoDrawer("notes");
-              }}
-              className="shrink-0 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            <span
+              className="shrink-0 inline-flex items-center gap-0.5 text-xs text-muted-foreground"
               title={`${noteCount} note${noteCount === 1 ? "" : "s"}`}
             >
               <MessageSquare className="h-3 w-3" />
               {noteCount}
-            </button>
+            </span>
           )}
         </div>
       </div>

@@ -27,7 +27,6 @@ import { formatBytes, formatDate, getFileExtension, isImageFile, cn } from "@/li
 import { useFileItemBehavior } from "./use-file-item-behavior";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
-import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import type { S3Object } from "@/types";
 
 interface FileRowProps {
@@ -90,7 +89,6 @@ export function FileRow({
   canDropOnFolder,
   noteCount = 0,
 }: FileRowProps) {
-  const { open: openInfoDrawer, setScope: setInfoScope } = useInfoDrawerStore();
   const Icon = getFileIcon(object.key, object.isFolder);
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, canPreview, fileName } = useFileItemBehavior({
     object, paneId, connectionId, bucket, currentPath,
@@ -170,19 +168,13 @@ export function FileRow({
             );
           })()}
           {object.isFolder && noteCount > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setInfoScope({ connectionId, bucket, prefix: object.key });
-                openInfoDrawer("notes");
-              }}
-              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            <span
+              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground"
               title={`${noteCount} note${noteCount === 1 ? "" : "s"}`}
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {noteCount}
-            </button>
+            </span>
           )}
         </div>
       </TableCell>
