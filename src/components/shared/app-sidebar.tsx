@@ -282,7 +282,7 @@ export function AppSidebar() {
             <Link2 className="h-4 w-4" />
             Shares
             {!can("shareLinks") && (
-              <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1.5 text-[8px] font-medium text-blue-400">
+              <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1 text-[8px] font-medium text-blue-400">
                 PRO
               </span>
             )}
@@ -450,7 +450,7 @@ export function AppSidebar() {
                   <Plus className="h-3.5 w-3.5" />
                   New team
                   {!can("teams") && (
-                    <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1.5 text-[8px] font-medium text-blue-400">
+                    <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1 text-[8px] font-medium text-blue-400">
                       PRO
                     </span>
                   )}
