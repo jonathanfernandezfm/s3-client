@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlansModal } from "./plans-modal";
+import { formatBytes, getTierDisplayName } from "@/lib/subscriptions/tiers";
+import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import type { TierConfig } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/generated/prisma/client";
 
@@ -33,7 +34,7 @@ function UsageMeter({
   limit: number;
   formatValue: (n: number) => string;
 }) {
-  const unlimited = limit === -1;
+  const unlimited = limit === -1 || limit === 0;
   const pct = unlimited ? 0 : Math.min(100, Math.round((current / limit) * 100));
   const barColor =
     pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-blue-500";
@@ -60,34 +61,30 @@ function UsageMeter({
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
 export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTabProps) {
-  const [plansOpen, setPlansOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const openPlansModal = useUpgradeModalStore((s) => s.open);
 
   async function handleManageBilling() {
     setPortalLoading(true);
     try {
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json();
+      if (!res.ok) {
+        console.error("Portal error:", data.error);
+        // TODO: show toast notification
+        return;
+      }
       if (data.url) window.location.href = data.url;
     } finally {
       setPortalLoading(false);
     }
   }
 
-  const tierLabel = tier === "FREE" ? "Free" : tier === "PRO" ? "Pro" : "Enterprise";
+  const tierLabel = getTierDisplayName(tier);
 
   return (
-    <>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
@@ -114,7 +111,7 @@ export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTa
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPlansOpen(true)}
+                  onClick={() => openPlansModal()}
                 >
                   View plans
                 </Button>
@@ -157,16 +154,13 @@ export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTa
             You&apos;ve used all {limits.maxConnections} connections.{" "}
             <button
               className="underline hover:no-underline"
-              onClick={() => setPlansOpen(true)}
+              onClick={() => openPlansModal()}
             >
-              Upgrade to PRO
+              {tier === "PRO" ? "Upgrade to Enterprise" : "Upgrade to PRO"}
             </button>{" "}
-            to add up to 10.
+            to add {tier === "PRO" ? "unlimited" : "up to 10"} connections.
           </div>
         )}
-      </div>
-
-      <PlansModal open={plansOpen} onOpenChange={setPlansOpen} />
-    </>
+    </div>
   );
 }
