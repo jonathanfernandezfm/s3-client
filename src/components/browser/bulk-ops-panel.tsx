@@ -26,6 +26,7 @@ import { Pencil, Tag, Trash2, X, Loader2, AlertCircle, Check, Link2 } from "luci
 import type { S3Object } from "@/types";
 import type { RenamePreviewItem } from "@/lib/bulk-rename";
 import { useCreateShareLink } from "@/lib/queries/share-links";
+import { FeatureGate } from "@/components/shared/feature-gate";
 
 interface BulkOpsPanelProps {
   paneId: string;
@@ -238,15 +239,17 @@ export function BulkOpsPanel({
             <Tag className="h-4 w-4" />
             Tag
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={shareAll}
-            disabled={shareProgress !== null}
-          >
-            <Link2 className="h-4 w-4" />
-            {shareProgress ? `${shareProgress.done}/${shareProgress.total}` : "Share"}
-          </Button>
+          <FeatureGate feature="shareLinks" label="Share Links">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={shareAll}
+              disabled={shareProgress !== null}
+            >
+              <Link2 className="h-4 w-4" />
+              {shareProgress ? `${shareProgress.done}/${shareProgress.total}` : "Share"}
+            </Button>
+          </FeatureGate>
           <Button
             size="sm"
             variant="ghost"

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
 import type { S3Object } from "@/types";
 import { ShareDialog } from "@/components/shares/share-dialog";
+import { FeatureGate } from "@/components/shared/feature-gate";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -203,13 +204,15 @@ export function FileTile({
         )}
       </div>
       {!object.isFolder && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
-          className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded bg-white/80 opacity-0 group-hover:opacity-100 z-10 shadow-sm"
-          title="Share"
-        >
-          <Link2 className="h-3.5 w-3.5" />
-        </button>
+        <FeatureGate feature="shareLinks" label="Share Links">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
+            className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded bg-white/80 opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+            title="Share"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+          </button>
+        </FeatureGate>
       )}
       <div className="mt-2 flex items-center gap-1 min-w-0">
         <span className="text-sm truncate" title={fileName}>{fileName}</span>

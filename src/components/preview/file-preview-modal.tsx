@@ -12,6 +12,7 @@ import { Download, Loader2, RefreshCw, X, Link2 } from "lucide-react";
 import { getPreviewKind } from "@/lib/utils";
 import type { S3Object } from "@/types";
 import { ShareDialog } from "@/components/shares/share-dialog";
+import { FeatureGate } from "@/components/shared/feature-gate";
 
 const ImagePreview = lazy(() => import("./renderers/image-preview"));
 const TextPreview = lazy(() => import("./renderers/text-preview"));
@@ -91,9 +92,11 @@ export function FilePreviewModal({
                 </Button>
               )}
               {object && !object.isFolder && (
-                <Button variant="outline" size="icon" onClick={() => setShareOpen(true)}>
-                  <Link2 className="h-4 w-4" />
-                </Button>
+                <FeatureGate feature="shareLinks" label="Share Links">
+                  <Button variant="outline" size="icon" onClick={() => setShareOpen(true)}>
+                    <Link2 className="h-4 w-4" />
+                  </Button>
+                </FeatureGate>
               )}
               <Button variant="outline" size="icon" onClick={onClose}>
                 <X className="h-4 w-4" />

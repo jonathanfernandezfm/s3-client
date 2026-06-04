@@ -31,6 +31,8 @@ import { useFileItemBehavior } from "./use-file-item-behavior";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
 import type { S3Object } from "@/types";
+import { useTier } from "@/hooks/use-tier";
+import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 
 interface FileRowProps {
   object: S3Object;
@@ -102,6 +104,8 @@ export function FileRow({
   });
 
   const [shareOpen, setShareOpen] = useState(false);
+  const { can } = useTier();
+  const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
   const createBookmark = useCreateBookmark();
   const deleteBookmark = useDeleteBookmark();
@@ -232,9 +236,16 @@ export function FileRow({
                 </DropdownMenuItem>
               )}
               {!object.isFolder && (
-                <DropdownMenuItem onClick={() => setShareOpen(true)}>
+                <DropdownMenuItem
+                  onClick={() => can("shareLinks") ? setShareOpen(true) : openUpgradeModal()}
+                >
                   <Link2 className="h-4 w-4" />
                   Share...
+                  {!can("shareLinks") && (
+                    <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1 text-[8px] font-medium text-blue-400">
+                      PRO
+                    </span>
+                  )}
                 </DropdownMenuItem>
               )}
               {object.isFolder && (() => {
