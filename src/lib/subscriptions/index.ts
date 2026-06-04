@@ -5,13 +5,13 @@ export {
   formatBytes,
   getTierDisplayName,
   type TierLimits,
+  type TierConfig,
+  type TeamLimits,
 } from "./tiers";
 
 export {
   canCreateConnection,
   canUploadFileSize,
-  canUploadMonthlyVolume,
-  canDownloadMonthlyVolume,
   canPerformOperation,
   type LimitCheckResult,
 } from "./check-limits";

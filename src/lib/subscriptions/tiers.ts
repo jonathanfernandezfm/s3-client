@@ -1,48 +1,57 @@
 import type { SubscriptionTier } from "@/generated/prisma/client";
 
-export const TIER_LIMITS = {
+export interface TeamLimits {
+  enabled: boolean;
+  maxTeams: number;       // -1 = unlimited
+  maxMembersPerTeam: number; // -1 = unlimited
+}
+
+export interface TierConfig {
+  maxConnections: number;
+  maxUploadSizeMB: number;
+  monthlyOperations: number;
+  shareLinks: boolean;
+  teams: TeamLimits;
+  activityRetentionDays: number; // -1 = unlimited
+}
+
+export const TIER_LIMITS: Record<SubscriptionTier, TierConfig> = {
   FREE: {
-    maxConnections: 2, // Max S3 connections
-    maxUploadSizeMB: 50, // Max single file upload (MB)
-    monthlyUploadGB: 5, // Max monthly upload volume (GB)
-    monthlyDownloadGB: 10, // Max monthly download volume (GB)
-    monthlyOperations: 1000, // Max API operations per month
+    maxConnections: 2,
+    maxUploadSizeMB: 50,
+    monthlyOperations: 1000,
+    shareLinks: false,
+    teams: { enabled: false, maxTeams: 0, maxMembersPerTeam: 0 },
+    activityRetentionDays: 30,
   },
   PRO: {
     maxConnections: 10,
-    maxUploadSizeMB: 500, // 500MB single file
-    monthlyUploadGB: 100, // 100GB monthly upload
-    monthlyDownloadGB: 500, // 500GB monthly download
+    maxUploadSizeMB: -1,
     monthlyOperations: 50000,
+    shareLinks: true,
+    teams: { enabled: true, maxTeams: 1, maxMembersPerTeam: 5 },
+    activityRetentionDays: 90,
   },
   ENTERPRISE: {
-    maxConnections: -1, // Unlimited (-1)
-    maxUploadSizeMB: -1, // Unlimited
-    monthlyUploadGB: -1, // Unlimited
-    monthlyDownloadGB: -1, // Unlimited
-    monthlyOperations: -1, // Unlimited
+    maxConnections: -1,
+    maxUploadSizeMB: -1,
+    monthlyOperations: -1,
+    shareLinks: true,
+    teams: { enabled: true, maxTeams: -1, maxMembersPerTeam: -1 },
+    activityRetentionDays: -1,
   },
-} as const;
+};
 
-export type TierLimits = (typeof TIER_LIMITS)[SubscriptionTier];
+export type TierLimits = TierConfig;
 
-/**
- * Get tier limits for a subscription tier
- */
-export function getTierLimits(tier: SubscriptionTier): TierLimits {
+export function getTierLimits(tier: SubscriptionTier): TierConfig {
   return TIER_LIMITS[tier];
 }
 
-/**
- * Check if a limit is unlimited
- */
 export function isUnlimited(limit: number): boolean {
   return limit === -1;
 }
 
-/**
- * Format bytes to human readable string
- */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -51,9 +60,6 @@ export function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
-/**
- * Get tier display name
- */
 export function getTierDisplayName(tier: SubscriptionTier): string {
   const names: Record<SubscriptionTier, string> = {
     FREE: "Free",

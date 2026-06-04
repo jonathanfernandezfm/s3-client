@@ -9,9 +9,6 @@ export type LimitCheckResult = {
   limit?: number;
 };
 
-/**
- * Check if user can create a new connection
- */
 export async function canCreateConnection(
   workspaceId: string,
   tier: SubscriptionTier
@@ -38,9 +35,6 @@ export async function canCreateConnection(
   return { allowed: true, current: count, limit };
 }
 
-/**
- * Check if upload size is within tier limits
- */
 export function canUploadFileSize(
   fileSizeBytes: number,
   tier: SubscriptionTier
@@ -65,93 +59,6 @@ export function canUploadFileSize(
   return { allowed: true };
 }
 
-/**
- * Check monthly upload volume
- */
-export async function canUploadMonthlyVolume(
-  userId: string,
-  tier: SubscriptionTier,
-  additionalBytes: number
-): Promise<LimitCheckResult> {
-  const limitGB = TIER_LIMITS[tier].monthlyUploadGB;
-
-  if (isUnlimited(limitGB)) {
-    return { allowed: true };
-  }
-
-  const limitBytes = limitGB * 1024 * 1024 * 1024;
-  const startOfMonth = getMonthStart();
-
-  const usage = await prisma.usageRecord.findUnique({
-    where: {
-      userId_month: {
-        userId,
-        month: startOfMonth,
-      },
-    },
-  });
-
-  const currentBytes = Number(usage?.uploadBytes ?? BigInt(0));
-  const newTotal = currentBytes + additionalBytes;
-
-  if (newTotal > limitBytes) {
-    const currentGB = Math.round(currentBytes / (1024 * 1024 * 1024));
-    return {
-      allowed: false,
-      reason: `Monthly upload limit of ${limitGB}GB reached for your ${tier} plan. Upgrade for more upload volume.`,
-      current: currentGB,
-      limit: limitGB,
-    };
-  }
-
-  return { allowed: true };
-}
-
-/**
- * Check monthly download volume
- */
-export async function canDownloadMonthlyVolume(
-  userId: string,
-  tier: SubscriptionTier,
-  additionalBytes: number
-): Promise<LimitCheckResult> {
-  const limitGB = TIER_LIMITS[tier].monthlyDownloadGB;
-
-  if (isUnlimited(limitGB)) {
-    return { allowed: true };
-  }
-
-  const limitBytes = limitGB * 1024 * 1024 * 1024;
-  const startOfMonth = getMonthStart();
-
-  const usage = await prisma.usageRecord.findUnique({
-    where: {
-      userId_month: {
-        userId,
-        month: startOfMonth,
-      },
-    },
-  });
-
-  const currentBytes = Number(usage?.downloadBytes ?? BigInt(0));
-  const newTotal = currentBytes + additionalBytes;
-
-  if (newTotal > limitBytes) {
-    const currentGB = Math.round(currentBytes / (1024 * 1024 * 1024));
-    return {
-      allowed: false,
-      reason: `Monthly download limit of ${limitGB}GB reached for your ${tier} plan. Upgrade for more download volume.`,
-      current: currentGB,
-      limit: limitGB,
-    };
-  }
-
-  return { allowed: true };
-}
-
-/**
- * Check monthly operations limit
- */
 export async function canPerformOperation(
   userId: string,
   tier: SubscriptionTier
@@ -165,12 +72,7 @@ export async function canPerformOperation(
   const startOfMonth = getMonthStart();
 
   const usage = await prisma.usageRecord.findUnique({
-    where: {
-      userId_month: {
-        userId,
-        month: startOfMonth,
-      },
-    },
+    where: { userId_month: { userId, month: startOfMonth } },
   });
 
   const currentCount = usage?.operationCount ?? 0;

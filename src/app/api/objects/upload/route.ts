@@ -5,7 +5,6 @@ import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import {
   canUploadFileSize,
-  canUploadMonthlyVolume,
   recordUpload,
 } from "@/lib/subscriptions";
 import { recordActivity } from "@/lib/db/activity";
@@ -46,12 +45,6 @@ export const POST = withAuth(async (req, { user }) => {
     const sizeCheck = canUploadFileSize(file.size, tier);
     if (!sizeCheck.allowed) {
       return NextResponse.json({ error: sizeCheck.reason }, { status: 403 });
-    }
-
-    // Check monthly volume limit
-    const volumeCheck = await canUploadMonthlyVolume(user.id, tier, file.size);
-    if (!volumeCheck.allowed) {
-      return NextResponse.json({ error: volumeCheck.reason }, { status: 403 });
     }
 
     const client = createS3Client(access.connection);
