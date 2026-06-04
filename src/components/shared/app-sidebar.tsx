@@ -49,6 +49,7 @@ import {
   Star,
   GripVertical,
   Link2,
+  CreditCard,
 } from "lucide-react";
 import {
   DndContext,
@@ -164,6 +165,7 @@ export function AppSidebar() {
 
   const isSettingsActive =
     pathname === "/settings" || pathname.startsWith("/settings/");
+  const isBillingActive = pathname === "/settings/billing";
   const isConnectionsActive =
     pathname === "/connections" || pathname.startsWith("/connections/");
   const isTeamsActive = pathname === "/teams" || pathname.startsWith("/teams/");
@@ -460,18 +462,30 @@ export function AppSidebar() {
           )}
         </nav>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-1">
           <Link
             href="/settings"
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-              isSettingsActive
+              isSettingsActive && !isBillingActive
                 ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                 : "text-sidebar-foreground hover:bg-sidebar-accent/50"
             )}
           >
             <Settings className="h-4 w-4" />
             Settings
+          </Link>
+          <Link
+            href="/settings/billing"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+              isBillingActive
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+            )}
+          >
+            <CreditCard className="h-4 w-4" />
+            Billing
           </Link>
         </div>
       </aside>
