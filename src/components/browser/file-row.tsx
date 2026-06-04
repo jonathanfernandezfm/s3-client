@@ -149,7 +149,6 @@ export function FileRow({
             e.stopPropagation();
             onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
           }}
-          className="h-4 w-4 rounded border-gray-300"
         />
       </TableCell>
       <TableCell>

@@ -221,7 +221,7 @@ function FilterStrip({
         <select
           value={userFilter ?? ""}
           onChange={(e) => setUserFilter(e.target.value || null)}
-          className="flex-1 text-xs h-7 rounded border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="flex-1 text-xs h-7"
         >
           <option value="">All users</option>
           {users.map(([uid, name]) => (

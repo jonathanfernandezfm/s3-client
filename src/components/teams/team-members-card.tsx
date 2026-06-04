@@ -81,7 +81,7 @@ export function TeamMembersCard({
                 id="member-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as "ADMIN" | "VIEWER")}
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm transition-colors appearance-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="h-9 w-full"
               >
                 <option value="VIEWER">Viewer</option>
                 <option value="ADMIN">Admin</option>

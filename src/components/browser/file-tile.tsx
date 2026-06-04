@@ -110,7 +110,7 @@ export function FileTile({
             onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
           }}
           data-selected={isSelected}
-          className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
+          className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
         />
         <Link
           href={`/browser/${connectionId}/${bucket}/${object.key}`}
@@ -174,7 +174,7 @@ export function FileTile({
           onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
         }}
         data-selected={isSelected}
-        className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
+        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
       />
       <div
         className="aspect-square rounded-md border bg-muted overflow-hidden relative flex items-center justify-center cursor-pointer"

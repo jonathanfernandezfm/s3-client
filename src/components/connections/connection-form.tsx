@@ -184,7 +184,7 @@ export function ConnectionForm({
                 name="workspaceId"
                 value={formData.workspaceId ?? ""}
                 onChange={handleChange}
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full h-9"
               >
                 {adminWorkspaces.map((ws) => (
                   <option key={ws.id} value={ws.id}>
@@ -272,7 +272,6 @@ export function ConnectionForm({
               type="checkbox"
               checked={formData.forcePathStyle}
               onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
             />
             <Label htmlFor="forcePathStyle" className="text-sm font-normal">
               Force path style (required for MinIO, etc.)
