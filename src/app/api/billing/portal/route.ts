@@ -14,10 +14,18 @@ export const POST = withAuth(async (req, { user }) => {
 
   const origin = new URL(req.url).origin;
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: stripeCustomerId,
-    return_url: `${origin}/settings/billing`,
-  });
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: stripeCustomerId,
+      return_url: `${origin}/settings/billing`,
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    console.error("Stripe portal error:", err);
+    return NextResponse.json(
+      { error: "Failed to create billing portal session. Please try again." },
+      { status: 500 }
+    );
+  }
 });
