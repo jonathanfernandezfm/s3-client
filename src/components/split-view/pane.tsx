@@ -48,7 +48,7 @@ export function Pane({ paneId, isLastColumn = true }: PaneProps) {
         onClick={handleClick}
       >
         <TabBar paneId={paneId} />
-        <div className="flex-1 flex flex-col p-6 overflow-auto">
+        <div className="flex-1 flex flex-col p-4 @md:p-6 overflow-auto @container">
           <TabContent paneId={paneId} />
         </div>
       </div>

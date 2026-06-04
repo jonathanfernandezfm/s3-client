@@ -456,7 +456,7 @@ export function FileBrowser({
             onChange={(m) => setViewMode(paneId, m)}
           />
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
             onClick={() => toggleInfoDrawer("activity")}
             title="Activity"
@@ -465,7 +465,7 @@ export function FileBrowser({
             <History className="h-4 w-4" />
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
             onClick={() => toggleInfoDrawer("notes")}
             title="Notes"

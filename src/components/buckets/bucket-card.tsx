@@ -56,12 +56,12 @@ export function BucketCard({
   return (
     <Link href={browserUrl} className="block" onClick={handleClick}>
       <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted-foreground" />
-            {bucket.name}
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
+            <Database className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="truncate">{bucket.name}</span>
           </CardTitle>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={(e) => {
                 e.preventDefault();

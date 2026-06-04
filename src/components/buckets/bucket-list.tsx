@@ -101,16 +101,16 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
         return (
           <div key={workspace.id} className="space-y-6">
             {index > 0 && <div className="border-t border-border/50" />}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               {workspace.type === "TEAM" ? (
-                <Users className="h-3 w-3 text-muted-foreground/70" />
+                <Users className="h-3 w-3 text-muted-foreground/70 shrink-0" />
               ) : (
-                <Briefcase className="h-3 w-3 text-muted-foreground/70" />
+                <Briefcase className="h-3 w-3 text-muted-foreground/70 shrink-0" />
               )}
-              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground/70">
+              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground/70 truncate">
                 {workspace.name}
               </span>
-              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground/50">
+              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground/50 shrink-0">
                 · {workspace.role}
               </span>
             </div>
@@ -122,24 +122,26 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
                   id={`connection-${group.connection.id}`}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between border-b pb-3">
-                    <div className="flex items-center gap-2">
-                      <Server className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="text-lg font-semibold">
+                  <div className="flex items-center justify-between gap-2 border-b pb-3 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Server className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <h3 className="text-lg font-semibold truncate min-w-0">
                         {getDisplayName(group.connection)}
                       </h3>
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground border rounded px-1.5 py-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground border rounded px-1.5 py-0.5 shrink-0">
                         {group.connection.role}
                       </span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground shrink-0">
                         ({group.buckets.length} bucket
                         {group.buckets.length !== 1 ? "s" : ""})
                       </span>
                     </div>
-                    <CreateBucketDialog
-                      connectionId={group.connection.id}
-                      disabled={group.connection.role !== "ADMIN"}
-                    />
+                    <div className="shrink-0">
+                      <CreateBucketDialog
+                        connectionId={group.connection.id}
+                        disabled={group.connection.role !== "ADMIN"}
+                      />
+                    </div>
                   </div>
 
                   {group.isLoading ? (
@@ -154,7 +156,7 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
                       </p>
                     </div>
                   ) : group.buckets.length > 0 ? (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
                       {group.buckets.map((bucket) => (
                         <BucketCard
                           key={`${group.connection.id}-${bucket.name}`}
