@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Home, MoreHorizontal, Star } from "lucide-react";
+import { ChevronRight, Home, MoreHorizontal, Settings, Star } from "lucide-react";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
 
@@ -106,6 +106,15 @@ export function Breadcrumb({
         title={bucket}
       >
         {bucket}
+      </Link>
+
+      <Link
+        href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}?tab=multipart`}
+        className="ml-1 p-1 rounded hover:bg-accent text-muted-foreground/60 hover:text-foreground shrink-0"
+        title="Bucket settings"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Settings className="h-3.5 w-3.5" />
       </Link>
 
       {shouldCollapse && (
