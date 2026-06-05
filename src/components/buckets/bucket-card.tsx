@@ -9,12 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Database, MoreVertical, Trash2, FolderOpen, Star, Settings } from "lucide-react";
+import { Database, MoreVertical, Trash2, FolderOpen, Star, Settings, History } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import type { S3Bucket } from "@/types";
 import { useBookmarks, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { isBookmarked, findBookmark } from "@/lib/bookmarks-helpers";
+import { useBucketVersioning } from "@/lib/queries/buckets";
 
 interface BucketCardProps {
   bucket: S3Bucket;
@@ -40,6 +41,8 @@ export function BucketCard({
   const createBookmark = useCreateBookmark();
   const deleteBookmark = useDeleteBookmark();
   const pinned = isBookmarked(bookmarks, connectionId, bucket.name, null);
+  const versioning = useBucketVersioning(connectionId, bucket.name);
+  const enabled = versioning.data?.status === "Enabled";
 
   const handleClick = (e: React.MouseEvent) => {
     if (onOpen) {
@@ -62,6 +65,11 @@ export function BucketCard({
           <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
             <Database className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="truncate">{bucket.name}</span>
+            {enabled && (
+              <span title="Versioning enabled" className="inline-flex ml-1.5 align-middle">
+                <History className="h-3.5 w-3.5 text-muted-foreground" />
+              </span>
+            )}
           </CardTitle>
           <div className="flex items-center gap-1 shrink-0">
             <button
