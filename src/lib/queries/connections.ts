@@ -151,3 +151,54 @@ export function useDeleteConnection() {
     },
   });
 }
+
+export interface ImportProfilePayload {
+  name: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+export interface ImportProfileResult {
+  name: string;
+  status: "saved" | "invalid";
+  connectionId?: string;
+  error?: string;
+}
+
+export interface ImportAwsProfilesInput {
+  workspaceId?: string;
+  profiles: ImportProfilePayload[];
+}
+
+export interface ImportAwsProfilesResponse {
+  results: ImportProfileResult[];
+}
+
+async function importAwsProfiles(
+  input: ImportAwsProfilesInput
+): Promise<ImportAwsProfilesResponse> {
+  const response = await fetch("/api/connections/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "Failed to import AWS profiles");
+  }
+
+  return response.json();
+}
+
+export function useImportAwsProfiles() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ImportAwsProfilesInput) => importAwsProfiles(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: connectionKeys.all });
+    },
+  });
+}
