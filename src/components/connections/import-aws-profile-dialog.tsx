@@ -1,7 +1,8 @@
 "use client";
 
-import { useReducer, useRef } from "react";
+import { useReducer, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { parseAwsProfiles, type ParsedProfile } from "@/lib/aws/parse-profiles";
+import { useWorkspaces } from "@/lib/queries/workspaces";
 
 interface ImportAwsProfileDialogProps {
   open: boolean;
@@ -26,22 +28,89 @@ interface UploadState {
   parseError?: string;
 }
 
-type State = UploadState;
+interface SelectState {
+  step: "select";
+  profiles: ParsedProfile[];
+  selection: Map<string, { selected: boolean; name: string }>;
+  workspaceId: string;
+}
+
+type State = UploadState | SelectState;
 
 type Action =
   | { type: "set-credentials"; content: string }
   | { type: "set-config"; content: string }
   | { type: "set-parse-error"; error: string }
+  | {
+      type: "advance-to-select";
+      profiles: ParsedProfile[];
+      defaultWorkspaceId: string;
+    }
+  | { type: "back-to-upload" }
+  | { type: "toggle-profile"; name: string }
+  | { type: "rename-profile"; name: string; newName: string }
+  | { type: "set-all"; selected: boolean }
+  | { type: "set-workspace"; workspaceId: string }
   | { type: "reset" };
+
+function makeInitialSelection(
+  profiles: ParsedProfile[]
+): Map<string, { selected: boolean; name: string }> {
+  const map = new Map<string, { selected: boolean; name: string }>();
+  for (const p of profiles) {
+    map.set(p.name, { selected: p.kind === "static", name: p.name });
+  }
+  return map;
+}
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "set-credentials":
+      if (state.step !== "upload") return state;
       return { ...state, credentials: action.content, parseError: undefined };
     case "set-config":
+      if (state.step !== "upload") return state;
       return { ...state, config: action.content, parseError: undefined };
     case "set-parse-error":
+      if (state.step !== "upload") return state;
       return { ...state, parseError: action.error };
+    case "advance-to-select":
+      return {
+        step: "select",
+        profiles: action.profiles,
+        selection: makeInitialSelection(action.profiles),
+        workspaceId: action.defaultWorkspaceId,
+      };
+    case "back-to-upload":
+      return { step: "upload" };
+    case "toggle-profile": {
+      if (state.step !== "select") return state;
+      const next = new Map(state.selection);
+      const entry = next.get(action.name);
+      if (entry) next.set(action.name, { ...entry, selected: !entry.selected });
+      return { ...state, selection: next };
+    }
+    case "rename-profile": {
+      if (state.step !== "select") return state;
+      const next = new Map(state.selection);
+      const entry = next.get(action.name);
+      if (entry) next.set(action.name, { ...entry, name: action.newName });
+      return { ...state, selection: next };
+    }
+    case "set-all": {
+      if (state.step !== "select") return state;
+      const next = new Map(state.selection);
+      for (const [key, value] of next) {
+        const profile = state.profiles.find((p) => p.name === key);
+        if (profile?.kind === "static") {
+          next.set(key, { ...value, selected: action.selected });
+        }
+      }
+      return { ...state, selection: next };
+    }
+    case "set-workspace":
+      if (state.step !== "select") return state;
+      return { ...state, workspaceId: action.workspaceId };
     case "reset":
       return { step: "upload" };
   }
@@ -52,11 +121,14 @@ const MAX_FILE_SIZE = 1024 * 1024;
 export function ImportAwsProfileDialog({
   open,
   onOpenChange,
-  defaultWorkspaceId: _defaultWorkspaceId,
+  defaultWorkspaceId,
 }: ImportAwsProfileDialogProps) {
   const [state, dispatch] = useReducer(reducer, { step: "upload" });
-  const credentialsInputRef = useRef<HTMLInputElement>(null);
-  const configInputRef = useRef<HTMLInputElement>(null);
+  const { data: workspaces = [] } = useWorkspaces();
+  const adminWorkspaces = useMemo(
+    () => workspaces.filter((w) => w.role === "ADMIN"),
+    [workspaces]
+  );
 
   const handleFile = async (
     file: File,
@@ -76,96 +148,248 @@ export function ImportAwsProfileDialog({
     });
   };
 
-  const canParse = !!state.credentials;
-  let parsedPreview: ParsedProfile[] = [];
-  if (canParse) {
-    try {
-      parsedPreview = parseAwsProfiles({
-        credentials: state.credentials,
-        config: state.config,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown parse error";
-      if (state.parseError !== message) {
-        dispatch({ type: "set-parse-error", error: message });
-      }
-    }
-  }
-
   const close = () => {
     dispatch({ type: "reset" });
     onOpenChange(false);
   };
 
+  if (state.step === "upload") {
+    let parsedPreview: ParsedProfile[] = [];
+    if (state.credentials) {
+      try {
+        parsedPreview = parseAwsProfiles({
+          credentials: state.credentials,
+          config: state.config,
+        });
+      } catch {
+        parsedPreview = [];
+      }
+    }
+
+    const fallbackWorkspaceId =
+      defaultWorkspaceId ??
+      adminWorkspaces.find((w) => w.type === "PERSONAL")?.id ??
+      adminWorkspaces[0]?.id ??
+      "";
+
+    return (
+      <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import from AWS profile</DialogTitle>
+            <DialogDescription>
+              Upload your <code>~/.aws/credentials</code> file (and optionally{" "}
+              <code>~/.aws/config</code>) to import multiple connections at
+              once. Files are parsed in your browser and never uploaded as
+              files.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="credentials-file">credentials file (required)</Label>
+              <input
+                id="credentials-file"
+                type="file"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await handleFile(file, "credentials");
+                }}
+                className="text-sm"
+              />
+              {state.credentials && (
+                <p className="text-xs text-green-600">
+                  Loaded ({state.credentials.length.toLocaleString()} chars)
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="config-file">config file (optional)</Label>
+              <input
+                id="config-file"
+                type="file"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await handleFile(file, "config");
+                }}
+                className="text-sm"
+              />
+              {state.config && (
+                <p className="text-xs text-green-600">
+                  Loaded ({state.config.length.toLocaleString()} chars)
+                </p>
+              )}
+            </div>
+
+            {state.parseError && (
+              <p className="text-sm text-destructive">{state.parseError}</p>
+            )}
+
+            {state.credentials && !state.parseError && (
+              <p className="text-sm text-muted-foreground">
+                Found {parsedPreview.length} profile
+                {parsedPreview.length === 1 ? "" : "s"}.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={close}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!state.credentials || parsedPreview.length === 0}
+              onClick={() =>
+                dispatch({
+                  type: "advance-to-select",
+                  profiles: parsedPreview,
+                  defaultWorkspaceId: fallbackWorkspaceId,
+                })
+              }
+            >
+              Next
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // state.step === "select"
+  const importableCount = Array.from(state.selection.values()).filter(
+    (s) => s.selected && s.name.trim().length > 0
+  ).length;
+  const allNamesValid = Array.from(state.selection.entries()).every(
+    ([profileName, sel]) => {
+      const profile = state.profiles.find((p) => p.name === profileName);
+      if (profile?.kind !== "static") return true;
+      if (!sel.selected) return true;
+      return sel.name.trim().length > 0;
+    }
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import from AWS profile</DialogTitle>
-          <DialogDescription>
-            Upload your <code>~/.aws/credentials</code> file (and optionally{" "}
-            <code>~/.aws/config</code>) to import multiple connections at once.
-            Files are parsed in your browser and never uploaded as files.
-          </DialogDescription>
+          <DialogTitle>
+            {state.profiles.length} profiles found, {importableCount} importable
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="credentials-file">credentials file (required)</Label>
-            <input
-              ref={credentialsInputRef}
-              id="credentials-file"
-              type="file"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) await handleFile(file, "credentials");
-              }}
-              className="text-sm"
-            />
-            {state.credentials && (
-              <p className="text-xs text-green-600">
-                Loaded ({state.credentials.length.toLocaleString()} chars)
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="config-file">config file (optional)</Label>
-            <input
-              ref={configInputRef}
-              id="config-file"
-              type="file"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) await handleFile(file, "config");
-              }}
-              className="text-sm"
-            />
-            {state.config && (
-              <p className="text-xs text-green-600">
-                Loaded ({state.config.length.toLocaleString()} chars)
-              </p>
-            )}
-          </div>
-
-          {state.parseError && (
-            <p className="text-sm text-destructive">{state.parseError}</p>
+          {adminWorkspaces.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="import-workspace">Workspace</Label>
+              <select
+                id="import-workspace"
+                value={state.workspaceId}
+                onChange={(e) =>
+                  dispatch({ type: "set-workspace", workspaceId: e.target.value })
+                }
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+              >
+                {adminWorkspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name} ({ws.type === "PERSONAL" ? "Personal" : "Team"})
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
 
-          {canParse && !state.parseError && (
-            <p className="text-sm text-muted-foreground">
-              Found {parsedPreview.length} profile
-              {parsedPreview.length === 1 ? "" : "s"}.
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="underline text-muted-foreground"
+                onClick={() => dispatch({ type: "set-all", selected: true })}
+              >
+                Select all importable
+              </button>
+              <button
+                type="button"
+                className="underline text-muted-foreground"
+                onClick={() => dispatch({ type: "set-all", selected: false })}
+              >
+                Deselect all
+              </button>
+            </div>
+          </div>
+
+          <div className="border rounded-md divide-y max-h-[40vh] overflow-y-auto">
+            {state.profiles.map((profile) => {
+              const sel = state.selection.get(profile.name);
+              const isStatic = profile.kind === "static";
+              return (
+                <div
+                  key={profile.name}
+                  className="flex items-center gap-3 p-3 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!sel?.selected}
+                    disabled={!isStatic}
+                    onChange={() =>
+                      dispatch({ type: "toggle-profile", name: profile.name })
+                    }
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={
+                          isStatic ? "font-medium" : "text-muted-foreground"
+                        }
+                      >
+                        {profile.name}
+                      </span>
+                      {isStatic && (
+                        <span className="text-xs text-muted-foreground">
+                          {profile.region}
+                        </span>
+                      )}
+                    </div>
+                    {!isStatic && (
+                      <p className="text-xs text-muted-foreground">
+                        {"reason" in profile ? profile.reason : ""}
+                      </p>
+                    )}
+                  </div>
+                  {isStatic && sel && (
+                    <Input
+                      className="w-48 h-8 text-xs"
+                      value={sel.name}
+                      onChange={(e) =>
+                        dispatch({
+                          type: "rename-profile",
+                          name: profile.name,
+                          newName: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {!allNamesValid && (
+            <p className="text-sm text-destructive">
+              Connection names cannot be empty.
             </p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={close}>
-            Cancel
+          <Button
+            variant="outline"
+            onClick={() => dispatch({ type: "back-to-upload" })}
+          >
+            Back
           </Button>
-          <Button disabled={!canParse || parsedPreview.length === 0}>
-            Next
+          <Button disabled={importableCount === 0 || !allNamesValid}>
+            Import {importableCount} profile{importableCount === 1 ? "" : "s"}
           </Button>
         </DialogFooter>
       </DialogContent>
