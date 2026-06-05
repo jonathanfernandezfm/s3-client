@@ -258,4 +258,97 @@ describe("parseAwsProfiles", () => {
       reason: "missing aws_access_key_id",
     });
   });
+
+  test("ignores [sso-session X] section headers entirely", () => {
+    const config = [
+      "[sso-session my-corp-sso]",
+      "sso_start_url = https://example.awsapps.com/start",
+      "sso_region = us-east-1",
+      "",
+      "[profile dev]",
+      "region = us-west-2",
+    ].join("\n");
+
+    const credentials = [
+      "[dev]",
+      "aws_access_key_id = AKIA_DEV",
+      "aws_secret_access_key = secret_dev",
+    ].join("\n");
+
+    const result = parseAwsProfiles({ credentials, config });
+
+    expect(result.map((p) => p.name)).toEqual(["dev"]);
+  });
+
+  test("ignores [services X] section headers entirely", () => {
+    const config = [
+      "[services my-services]",
+      "s3 =",
+      "  endpoint_url = http://custom",
+      "",
+      "[profile dev]",
+      "region = eu-central-1",
+    ].join("\n");
+
+    const credentials = [
+      "[dev]",
+      "aws_access_key_id = AKIA_DEV",
+      "aws_secret_access_key = secret_dev",
+    ].join("\n");
+
+    const result = parseAwsProfiles({ credentials, config });
+
+    expect(result.map((p) => p.name)).toEqual(["dev"]);
+  });
+
+  test("realistic multi-profile fixture parses to the expected mix of kinds", () => {
+    const credentials = [
+      "# Personal credentials file",
+      "[default]",
+      "aws_access_key_id = AKIA_DEFAULT",
+      "aws_secret_access_key = secret_default",
+      "",
+      "[work]",
+      "aws_access_key_id = AKIA_WORK",
+      "aws_secret_access_key = secret_work",
+      "",
+      "[temp-session]",
+      "aws_access_key_id = AKIA_TEMP",
+      "aws_secret_access_key = secret_temp",
+      "aws_session_token = AQoDYXdz...",
+    ].join("\n");
+
+    const config = [
+      "[default]",
+      "region = us-east-1",
+      "",
+      "[profile work]",
+      "region = us-west-2",
+      "",
+      "[profile prod]",
+      "role_arn = arn:aws:iam::123456789012:role/admin",
+      "source_profile = default",
+      "region = us-west-2",
+      "",
+      "[profile sso-test]",
+      "sso_session = my-corp",
+      "sso_account_id = 111111111111",
+      "sso_role_name = ReadOnly",
+      "",
+      "[sso-session my-corp]",
+      "sso_start_url = https://example.awsapps.com/start",
+      "sso_region = us-east-1",
+    ].join("\n");
+
+    const result = parseAwsProfiles({ credentials, config });
+
+    const byName = Object.fromEntries(result.map((p) => [p.name, p]));
+    expect(byName["default"].kind).toBe("static");
+    expect(byName["work"].kind).toBe("static");
+    expect(byName["temp-session"].kind).toBe("unsupported");
+    expect(byName["prod"].kind).toBe("role-chain");
+    expect(byName["sso-test"].kind).toBe("sso");
+    expect(byName["my-corp"]).toBeUndefined();
+    expect(result).toHaveLength(5);
+  });
 });
