@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ConnectionForm } from "@/components/connections/connection-form";
 import { ConnectionList } from "@/components/connections/connection-list";
+import { ImportAwsProfileDialog } from "@/components/connections/import-aws-profile-dialog";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,10 @@ function ConnectionsPageContent() {
   const [editingConnection, setEditingConnection] =
     useState<ConnectionResponse | null>(null);
   const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<
+    string | undefined
+  >(undefined);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importDefaultWorkspaceId, setImportDefaultWorkspaceId] = useState<
     string | undefined
   >(undefined);
 
@@ -41,6 +46,11 @@ function ConnectionsPageContent() {
     setEditingConnection(null);
     setDialogOpen(true);
   }, [intent, consumeIntent]);
+
+  const handleImport = (workspaceId?: string) => {
+    setImportDefaultWorkspaceId(workspaceId);
+    setImportDialogOpen(true);
+  };
 
   const handleAdd = (workspaceId?: string) => {
     setDefaultWorkspaceId(workspaceId);
@@ -69,7 +79,7 @@ function ConnectionsPageContent() {
         </p>
       </div>
 
-      <ConnectionList onAdd={handleAdd} onEdit={handleEdit} />
+      <ConnectionList onAdd={handleAdd} onEdit={handleEdit} onImport={handleImport} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
@@ -86,6 +96,12 @@ function ConnectionsPageContent() {
           />
         </DialogContent>
       </Dialog>
+
+      <ImportAwsProfileDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        defaultWorkspaceId={importDefaultWorkspaceId}
+      />
     </div>
   );
 }

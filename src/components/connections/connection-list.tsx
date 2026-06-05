@@ -38,9 +38,10 @@ import {
 interface ConnectionListProps {
   onAdd: (workspaceId?: string) => void;
   onEdit: (connection: ConnectionResponse) => void;
+  onImport: (workspaceId?: string) => void;
 }
 
-export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
+export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps) {
   const { data: connections = [], isLoading } = useConnections();
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useWorkspaces();
@@ -114,10 +115,15 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
         <p className="text-muted-foreground mb-4">
           Add your first S3 connection to get started
         </p>
-        <Button onClick={() => onAdd()}>
-          <Plus className="h-4 w-4" />
-          Add Connection
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => onAdd()}>
+            <Plus className="h-4 w-4" />
+            Add Connection
+          </Button>
+          <Button variant="outline" onClick={() => onImport()}>
+            Import from AWS profile
+          </Button>
+        </div>
       </div>
     );
   }
@@ -142,10 +148,15 @@ export function ConnectionList({ onAdd, onEdit }: ConnectionListProps) {
                 </span>
               </div>
               {canAdd && (
-                <Button size="sm" onClick={() => onAdd(workspace.id)}>
-                  <Plus className="h-4 w-4" />
-                  Add Connection
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => onAdd(workspace.id)}>
+                    <Plus className="h-4 w-4" />
+                    Add Connection
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => onImport(workspace.id)}>
+                    Import from AWS profile
+                  </Button>
+                </div>
               )}
             </div>
 
