@@ -101,7 +101,7 @@ export function BucketCard({
                   }}
                 >
                   <Settings className="h-4 w-4" />
-                  Bucket settings
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
