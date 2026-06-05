@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo } from "react";
+import { useReducer, useMemo, useRef, useState, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,108 @@ import {
   type ImportProfileResult,
 } from "@/lib/queries/connections";
 import { useNotificationStore } from "@/lib/stores/notification-store";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  UploadCloud,
+  FileText,
+} from "lucide-react";
+
+type FileSlot = "credentials" | "config";
+
+interface FileDropZoneProps {
+  slot: FileSlot;
+  label: string;
+  hint: string;
+  loaded?: string;
+  onFile: (file: File) => void | Promise<void>;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileDropZone({ slot, label, hint, loaded, onFile }: FileDropZoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const onDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) await onFile(file);
+  };
+
+  const inputId = `${slot}-file`;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
+      onDragOver={onDragOver}
+      onDragEnter={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={
+        "group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors " +
+        (isDragging
+          ? "border-primary bg-primary/5"
+          : loaded
+            ? "border-green-600/40 bg-green-600/5 hover:bg-green-600/10"
+            : "border-muted-foreground/30 hover:border-muted-foreground/50 hover:bg-muted/50")
+      }
+    >
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        className="sr-only"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) await onFile(file);
+          e.target.value = "";
+        }}
+      />
+      {loaded ? (
+        <>
+          <FileText className="h-6 w-6 text-green-600" />
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{loaded}</p>
+          <p className="text-xs text-muted-foreground underline group-hover:text-foreground">
+            Click or drop to replace
+          </p>
+        </>
+      ) : (
+        <>
+          <UploadCloud className="h-6 w-6 text-muted-foreground" />
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 interface ImportAwsProfileDialogProps {
   open: boolean;
@@ -28,10 +129,17 @@ interface ImportAwsProfileDialogProps {
   defaultWorkspaceId?: string;
 }
 
+interface FileMeta {
+  name: string;
+  size: number;
+}
+
 interface UploadState {
   step: "upload";
   credentials?: string;
+  credentialsMeta?: FileMeta;
   config?: string;
+  configMeta?: FileMeta;
   parseError?: string;
 }
 
@@ -56,8 +164,8 @@ interface ResultsState {
 type State = UploadState | SelectState | ImportingState | ResultsState;
 
 type Action =
-  | { type: "set-credentials"; content: string }
-  | { type: "set-config"; content: string }
+  | { type: "set-credentials"; content: string; meta: FileMeta }
+  | { type: "set-config"; content: string; meta: FileMeta }
   | { type: "set-parse-error"; error: string }
   | {
       type: "advance-to-select";
@@ -88,10 +196,20 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "set-credentials":
       if (state.step !== "upload") return state;
-      return { ...state, credentials: action.content, parseError: undefined };
+      return {
+        ...state,
+        credentials: action.content,
+        credentialsMeta: action.meta,
+        parseError: undefined,
+      };
     case "set-config":
       if (state.step !== "upload") return state;
-      return { ...state, config: action.content, parseError: undefined };
+      return {
+        ...state,
+        config: action.content,
+        configMeta: action.meta,
+        parseError: undefined,
+      };
     case "set-parse-error":
       if (state.step !== "upload") return state;
       return { ...state, parseError: action.error };
@@ -174,9 +292,11 @@ export function ImportAwsProfileDialog({
       return;
     }
     const content = await file.text();
+    const meta: FileMeta = { name: file.name, size: file.size };
     dispatch({
       type: target === "credentials" ? "set-credentials" : "set-config",
       content,
+      meta,
     });
   };
 
@@ -250,42 +370,29 @@ export function ImportAwsProfileDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="credentials-file">credentials file (required)</Label>
-              <input
-                id="credentials-file"
-                type="file"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) await handleFile(file, "credentials");
-                }}
-                className="text-sm"
-              />
-              {state.credentials && (
-                <p className="text-xs text-green-600">
-                  Loaded ({state.credentials.length.toLocaleString()} chars)
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="config-file">config file (optional)</Label>
-              <input
-                id="config-file"
-                type="file"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) await handleFile(file, "config");
-                }}
-                className="text-sm"
-              />
-              {state.config && (
-                <p className="text-xs text-green-600">
-                  Loaded ({state.config.length.toLocaleString()} chars)
-                </p>
-              )}
-            </div>
+          <div className="space-y-3">
+            <FileDropZone
+              slot="credentials"
+              label="credentials file"
+              hint="Required · click or drop ~/.aws/credentials"
+              loaded={
+                state.credentialsMeta
+                  ? `${state.credentialsMeta.name} · ${formatBytes(state.credentialsMeta.size)}`
+                  : undefined
+              }
+              onFile={(file) => handleFile(file, "credentials")}
+            />
+            <FileDropZone
+              slot="config"
+              label="config file"
+              hint="Optional · click or drop ~/.aws/config"
+              loaded={
+                state.configMeta
+                  ? `${state.configMeta.name} · ${formatBytes(state.configMeta.size)}`
+                  : undefined
+              }
+              onFile={(file) => handleFile(file, "config")}
+            />
 
             {state.parseError && (
               <p className="text-sm text-destructive">{state.parseError}</p>
