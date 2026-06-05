@@ -45,14 +45,41 @@ function parseIni(text: string): Map<string, RawProfile> {
   return sections;
 }
 
-export function parseAwsProfiles(input: ParseAwsProfilesInput): ParsedProfile[] {
-  const credentialsSections = input.credentials ? parseIni(input.credentials) : new Map();
-  const profiles: ParsedProfile[] = [];
+function normaliseConfigHeader(rawName: string): string | null {
+  const trimmed = rawName.trim();
+  if (trimmed === "default") return "default";
+  if (trimmed.startsWith("profile ")) return trimmed.slice("profile ".length).trim();
+  return null;
+}
 
-  for (const [name, fields] of credentialsSections) {
-    profiles.push(classify(name, fields));
+export function parseAwsProfiles(input: ParseAwsProfilesInput): ParsedProfile[] {
+  const credentialsSections = input.credentials ? parseIni(input.credentials) : new Map<string, RawProfile>();
+  const configSections = input.config ? parseIni(input.config) : new Map<string, RawProfile>();
+
+  const merged = new Map<string, RawProfile>();
+
+  for (const [rawName, fields] of configSections) {
+    const profileName = normaliseConfigHeader(rawName);
+    if (profileName === null) continue;
+    merged.set(profileName, { ...fields });
   }
 
+  for (const [name, fields] of credentialsSections) {
+    const existing = merged.get(name);
+    if (existing) {
+      const regionFromConfig = existing["region"];
+      const next: RawProfile = { ...existing, ...fields };
+      if (regionFromConfig !== undefined) next["region"] = regionFromConfig;
+      merged.set(name, next);
+    } else {
+      merged.set(name, { ...fields });
+    }
+  }
+
+  const profiles: ParsedProfile[] = [];
+  for (const [name, fields] of merged) {
+    profiles.push(classify(name, fields));
+  }
   return profiles;
 }
 
@@ -61,11 +88,13 @@ function classify(name: string, fields: RawProfile): ParsedProfile {
   const secretAccessKey = fields["aws_secret_access_key"];
   const region = fields["region"] ?? "us-east-1";
 
+  if (accessKeyId && secretAccessKey) {
+    return { kind: "static", name, region, accessKeyId, secretAccessKey };
+  }
+
   return {
-    kind: "static",
+    kind: "unsupported",
     name,
-    region,
-    accessKeyId,
-    secretAccessKey,
+    reason: "missing aws_access_key_id or aws_secret_access_key",
   };
 }
