@@ -40,6 +40,7 @@ enum ActivityAction {
   BUCKET_DELETE
   SHARE_CREATED
   SHARE_REVOKED
+  MULTIPART_ABORT
 }
 
 enum ShareLinkEventAction {
