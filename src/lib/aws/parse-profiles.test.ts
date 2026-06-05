@@ -119,4 +119,51 @@ describe("parseAwsProfiles", () => {
     expect(result[0].kind).toBe("unsupported");
     expect(result[0].name).toBe("orphan");
   });
+
+  test("ignores '#' and ';' comment lines", () => {
+    const credentials = [
+      "# Top-of-file comment",
+      "; alternative comment style",
+      "[default]",
+      "# inside a section",
+      "aws_access_key_id = AKIA_K",
+      "; another",
+      "aws_secret_access_key = secret_k",
+    ].join("\n");
+
+    const result = parseAwsProfiles({ credentials });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      kind: "static",
+      name: "default",
+      accessKeyId: "AKIA_K",
+      secretAccessKey: "secret_k",
+    });
+  });
+
+  test("ignores blank lines and tolerates surrounding whitespace", () => {
+    const credentials = [
+      "",
+      "   [default]   ",
+      "",
+      "  aws_access_key_id  =  AKIA_WS  ",
+      "  aws_secret_access_key  =  secret_ws  ",
+      "",
+    ].join("\n");
+
+    const result = parseAwsProfiles({ credentials });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      accessKeyId: "AKIA_WS",
+      secretAccessKey: "secret_ws",
+    });
+  });
+
+  test("returns empty array for completely empty input", () => {
+    expect(parseAwsProfiles({})).toEqual([]);
+    expect(parseAwsProfiles({ credentials: "" })).toEqual([]);
+    expect(parseAwsProfiles({ credentials: "# only a comment" })).toEqual([]);
+  });
 });
