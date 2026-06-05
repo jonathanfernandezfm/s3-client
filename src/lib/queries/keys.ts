@@ -60,4 +60,16 @@ export const queryKeys = {
   user: {
     subscription: () => ["user", "subscription"] as const,
   },
+  versions: {
+    all: ["versions"] as const,
+    list: (connectionId: string, bucket: string, prefix: string, key: string) =>
+      [...queryKeys.versions.all, connectionId, bucket, prefix, key] as const,
+    presign: (connectionId: string, bucket: string, key: string, versionId: string) =>
+      [...queryKeys.versions.all, "presign", connectionId, bucket, key, versionId] as const,
+  },
+  bucketVersioning: {
+    all: ["bucket-versioning"] as const,
+    status: (connectionId: string, bucket: string) =>
+      [...queryKeys.bucketVersioning.all, connectionId, bucket] as const,
+  },
 };
