@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { parseAwsProfiles, type ParsedProfile } from "@/lib/aws/parse-profiles";
 import { useWorkspaces } from "@/lib/queries/workspaces";
+import {
+  useImportAwsProfiles,
+  type ImportProfilePayload,
+  type ImportProfileResult,
+} from "@/lib/queries/connections";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 interface ImportAwsProfileDialogProps {
   open: boolean;
@@ -35,7 +42,18 @@ interface SelectState {
   workspaceId: string;
 }
 
-type State = UploadState | SelectState;
+interface ImportingState {
+  step: "importing";
+  count: number;
+  previousSelect: SelectState;
+}
+
+interface ResultsState {
+  step: "results";
+  results: ImportProfileResult[];
+}
+
+type State = UploadState | SelectState | ImportingState | ResultsState;
 
 type Action =
   | { type: "set-credentials"; content: string }
@@ -51,6 +69,9 @@ type Action =
   | { type: "rename-profile"; name: string; newName: string }
   | { type: "set-all"; selected: boolean }
   | { type: "set-workspace"; workspaceId: string }
+  | { type: "start-importing"; count: number }
+  | { type: "import-failed" }
+  | { type: "show-results"; results: ImportProfileResult[] }
   | { type: "reset" };
 
 function makeInitialSelection(
@@ -111,6 +132,14 @@ function reducer(state: State, action: Action): State {
     case "set-workspace":
       if (state.step !== "select") return state;
       return { ...state, workspaceId: action.workspaceId };
+    case "start-importing":
+      if (state.step !== "select") return state;
+      return { step: "importing", count: action.count, previousSelect: state };
+    case "import-failed":
+      if (state.step !== "importing") return state;
+      return state.previousSelect;
+    case "show-results":
+      return { step: "results", results: action.results };
     case "reset":
       return { step: "upload" };
   }
@@ -125,6 +154,9 @@ export function ImportAwsProfileDialog({
 }: ImportAwsProfileDialogProps) {
   const [state, dispatch] = useReducer(reducer, { step: "upload" });
   const { data: workspaces = [] } = useWorkspaces();
+  const importMutation = useImportAwsProfiles();
+  const { addNotification } = useNotificationStore();
+
   const adminWorkspaces = useMemo(
     () => workspaces.filter((w) => w.role === "ADMIN"),
     [workspaces]
@@ -153,6 +185,40 @@ export function ImportAwsProfileDialog({
     onOpenChange(false);
   };
 
+  const handleImport = async () => {
+    if (state.step !== "select") return;
+    const payload: ImportProfilePayload[] = [];
+    for (const profile of state.profiles) {
+      if (profile.kind !== "static") continue;
+      const sel = state.selection.get(profile.name);
+      if (!sel?.selected) continue;
+      payload.push({
+        name: sel.name.trim(),
+        region: profile.region,
+        accessKeyId: profile.accessKeyId,
+        secretAccessKey: profile.secretAccessKey,
+      });
+    }
+    if (payload.length === 0) return;
+    dispatch({ type: "start-importing", count: payload.length });
+    try {
+      const response = await importMutation.mutateAsync({
+        workspaceId: state.workspaceId,
+        profiles: payload,
+      });
+      dispatch({ type: "show-results", results: response.results });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to import";
+      addNotification({
+        type: "error",
+        title: "Import failed",
+        error: message,
+        status: "error",
+      });
+      dispatch({ type: "import-failed" });
+    }
+  };
+
   if (state.step === "upload") {
     let parsedPreview: ParsedProfile[] = [];
     if (state.credentials) {
@@ -179,9 +245,8 @@ export function ImportAwsProfileDialog({
             <DialogTitle>Import from AWS profile</DialogTitle>
             <DialogDescription>
               Upload your <code>~/.aws/credentials</code> file (and optionally{" "}
-              <code>~/.aws/config</code>) to import multiple connections at
-              once. Files are parsed in your browser and never uploaded as
-              files.
+              <code>~/.aws/config</code>) to import multiple connections at once.
+              Files are parsed in your browser and never uploaded as files.
             </DialogDescription>
           </DialogHeader>
 
@@ -256,51 +321,54 @@ export function ImportAwsProfileDialog({
     );
   }
 
-  // state.step === "select"
-  const importableCount = Array.from(state.selection.values()).filter(
-    (s) => s.selected && s.name.trim().length > 0
-  ).length;
-  const allNamesValid = Array.from(state.selection.entries()).every(
-    ([profileName, sel]) => {
-      const profile = state.profiles.find((p) => p.name === profileName);
-      if (profile?.kind !== "static") return true;
-      if (!sel.selected) return true;
-      return sel.name.trim().length > 0;
-    }
-  );
+  if (state.step === "select") {
+    const importableCount = Array.from(state.selection.entries()).filter(
+      ([profileName, sel]) => {
+        const profile = state.profiles.find((p) => p.name === profileName);
+        return profile?.kind === "static" && sel.selected && sel.name.trim().length > 0;
+      }
+    ).length;
+    const allNamesValid = Array.from(state.selection.entries()).every(
+      ([profileName, sel]) => {
+        const profile = state.profiles.find((p) => p.name === profileName);
+        if (profile?.kind !== "static") return true;
+        if (!sel.selected) return true;
+        return sel.name.trim().length > 0;
+      }
+    );
 
-  return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {state.profiles.length} profiles found, {importableCount} importable
-          </DialogTitle>
-        </DialogHeader>
+    return (
+      <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {state.profiles.length} profile{state.profiles.length === 1 ? "" : "s"} found,{" "}
+              {importableCount} importable
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {adminWorkspaces.length > 1 && (
-            <div className="space-y-2">
-              <Label htmlFor="import-workspace">Workspace</Label>
-              <select
-                id="import-workspace"
-                value={state.workspaceId}
-                onChange={(e) =>
-                  dispatch({ type: "set-workspace", workspaceId: e.target.value })
-                }
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-              >
-                {adminWorkspaces.map((ws) => (
-                  <option key={ws.id} value={ws.id}>
-                    {ws.name} ({ws.type === "PERSONAL" ? "Personal" : "Team"})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="space-y-4">
+            {adminWorkspaces.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="import-workspace">Workspace</Label>
+                <select
+                  id="import-workspace"
+                  value={state.workspaceId}
+                  onChange={(e) =>
+                    dispatch({ type: "set-workspace", workspaceId: e.target.value })
+                  }
+                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                  {adminWorkspaces.map((ws) => (
+                    <option key={ws.id} value={ws.id}>
+                      {ws.name} ({ws.type === "PERSONAL" ? "Personal" : "Team"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3 text-xs">
               <button
                 type="button"
                 className="underline text-muted-foreground"
@@ -316,81 +384,135 @@ export function ImportAwsProfileDialog({
                 Deselect all
               </button>
             </div>
-          </div>
 
-          <div className="border rounded-md divide-y max-h-[40vh] overflow-y-auto">
-            {state.profiles.map((profile) => {
-              const sel = state.selection.get(profile.name);
-              const isStatic = profile.kind === "static";
-              return (
-                <div
-                  key={profile.name}
-                  className="flex items-center gap-3 p-3 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!sel?.selected}
-                    disabled={!isStatic}
-                    onChange={() =>
-                      dispatch({ type: "toggle-profile", name: profile.name })
-                    }
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={
-                          isStatic ? "font-medium" : "text-muted-foreground"
-                        }
-                      >
-                        {profile.name}
-                      </span>
-                      {isStatic && (
-                        <span className="text-xs text-muted-foreground">
-                          {profile.region}
-                        </span>
-                      )}
-                    </div>
-                    {!isStatic && (
-                      <p className="text-xs text-muted-foreground">
-                        {"reason" in profile ? profile.reason : ""}
-                      </p>
-                    )}
-                  </div>
-                  {isStatic && sel && (
-                    <Input
-                      className="w-48 h-8 text-xs"
-                      value={sel.name}
-                      onChange={(e) =>
-                        dispatch({
-                          type: "rename-profile",
-                          name: profile.name,
-                          newName: e.target.value,
-                        })
+            <div className="border rounded-md divide-y max-h-[40vh] overflow-y-auto">
+              {state.profiles.map((profile) => {
+                const sel = state.selection.get(profile.name);
+                const isStatic = profile.kind === "static";
+                return (
+                  <div
+                    key={profile.name}
+                    className="flex items-center gap-3 p-3 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!sel?.selected}
+                      disabled={!isStatic}
+                      onChange={() =>
+                        dispatch({ type: "toggle-profile", name: profile.name })
                       }
                     />
-                  )}
-                </div>
-              );
-            })}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={isStatic ? "font-medium" : "text-muted-foreground"}>
+                          {profile.name}
+                        </span>
+                        {isStatic && (
+                          <span className="text-xs text-muted-foreground">
+                            {profile.region}
+                          </span>
+                        )}
+                      </div>
+                      {!isStatic && (
+                        <p className="text-xs text-muted-foreground">
+                          {"reason" in profile ? profile.reason : ""}
+                        </p>
+                      )}
+                    </div>
+                    {isStatic && sel && (
+                      <Input
+                        className="w-48 h-8 text-xs"
+                        value={sel.name}
+                        onChange={(e) =>
+                          dispatch({
+                            type: "rename-profile",
+                            name: profile.name,
+                            newName: e.target.value,
+                          })
+                        }
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!allNamesValid && (
+              <p className="text-sm text-destructive">
+                Connection names cannot be empty.
+              </p>
+            )}
           </div>
 
-          {!allNamesValid && (
-            <p className="text-sm text-destructive">
-              Connection names cannot be empty.
-            </p>
-          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: "back-to-upload" })}
+            >
+              Back
+            </Button>
+            <Button
+              disabled={importableCount === 0 || !allNamesValid}
+              onClick={handleImport}
+            >
+              Import {importableCount} profile{importableCount === 1 ? "" : "s"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (state.step === "importing") {
+    return (
+      <Dialog open={open} onOpenChange={() => undefined}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Validating {state.count} profile{state.count === 1 ? "" : "s"}…</DialogTitle>
+            <DialogDescription>
+              Testing each profile's credentials against AWS S3. This may take a few seconds.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // state.step === "results"
+  const savedCount = state.results.filter((r) => r.status === "saved").length;
+  return (
+    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            Imported {savedCount} of {state.results.length} profile{state.results.length === 1 ? "" : "s"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-1 max-h-[40vh] overflow-y-auto">
+          {state.results.map((result) => (
+            <div
+              key={result.name}
+              className="flex items-center gap-2 p-2 text-sm border-b last:border-b-0"
+            >
+              {result.status === "saved" ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              ) : (
+                <XCircle className="h-4 w-4 text-destructive shrink-0" />
+              )}
+              <span className="flex-1 min-w-0 truncate">{result.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {result.status === "saved" ? "Saved" : result.error || "Invalid"}
+              </span>
+            </div>
+          ))}
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: "back-to-upload" })}
-          >
-            Back
-          </Button>
-          <Button disabled={importableCount === 0 || !allNamesValid}>
-            Import {importableCount} profile{importableCount === 1 ? "" : "s"}
-          </Button>
+          <Button onClick={close}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
