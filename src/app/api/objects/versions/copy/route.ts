@@ -68,13 +68,11 @@ export const POST = withAuth(async (req, { user }) => {
     }
 
     const client = createS3Client(sourceAccess.connection);
-    const copySource =
-      encodeURIComponent(`${bucket}/${key}`) + `?versionId=${encodeURIComponent(versionId)}`;
     await client.send(
       new CopyObjectCommand({
         Bucket: targetBucket,
         Key: targetKey,
-        CopySource: copySource,
+        CopySource: `${bucket}/${encodeURIComponent(key)}?versionId=${encodeURIComponent(versionId)}`,
       }),
     );
 
