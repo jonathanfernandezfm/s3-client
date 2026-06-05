@@ -4,6 +4,7 @@ import { DragProvider } from "@/lib/contexts/drag-context";
 import { Notifications } from "@/components/shared/notifications";
 import { CommandPaletteMount } from "@/components/command-palette/command-palette-mount";
 import { InfoDrawer } from "@/components/info-drawer/info-drawer";
+import { VersionHistoryDialog } from "@/components/versions/version-history-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PlansModal } from "@/components/billing/plans-modal";
 
@@ -23,6 +24,7 @@ export default function DashboardLayout({
         </div>
       </div>
       <InfoDrawer />
+      <VersionHistoryDialog />
       <Notifications />
       <CommandPaletteMount />
       <PlansModal />
