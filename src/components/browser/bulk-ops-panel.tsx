@@ -236,10 +236,12 @@ export function BulkOpsPanel({
             <Pencil className="h-4 w-4" />
             Rename
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => openDialog("tag", paneId)}>
-            <Tag className="h-4 w-4" />
-            Tag
-          </Button>
+          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="object-tagging">
+            <Button size="sm" variant="ghost" onClick={() => openDialog("tag", paneId)}>
+              <Tag className="h-4 w-4" />
+              Tag
+            </Button>
+          </CapabilityGate>
           <FeatureGate feature="shareLinks" label="Share Links">
             <Button
               size="sm"

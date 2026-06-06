@@ -6,6 +6,7 @@ import { History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBucketVersioning, useSetBucketVersioning } from "@/lib/queries/buckets";
 import { toast } from "@/hooks/use-toast";
+import { CapabilityGate } from "@/components/health/capability-gate";
 
 interface OverviewVersioningCardProps {
   connectionId: string;
@@ -99,22 +100,26 @@ export function OverviewVersioningCard({
             </p>
             {canEdit ? (
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="default"
-                  disabled={status === "Enabled" || isPending}
-                  onClick={handleEnable}
-                >
-                  Enable
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={status !== "Enabled" || isPending}
-                  onClick={handleSuspend}
-                >
-                  Suspend
-                </Button>
+                <CapabilityGate connectionId={connectionId} bucket={bucket} capability="manage-versioning">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    disabled={status === "Enabled" || isPending}
+                    onClick={handleEnable}
+                  >
+                    Enable
+                  </Button>
+                </CapabilityGate>
+                <CapabilityGate connectionId={connectionId} bucket={bucket} capability="manage-versioning">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={status !== "Enabled" || isPending}
+                    onClick={handleSuspend}
+                  >
+                    Suspend
+                  </Button>
+                </CapabilityGate>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
