@@ -16,6 +16,7 @@ import type { S3Bucket } from "@/types";
 import { useBookmarks, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { isBookmarked, findBookmark } from "@/lib/bookmarks-helpers";
 import { useBucketVersioning } from "@/lib/queries/buckets";
+import { CapabilityGate } from "@/components/health/capability-gate";
 
 interface BucketCardProps {
   bucket: S3Bucket;
@@ -127,16 +128,21 @@ export function BucketCard({
                   Settings
                 </DropdownMenuItem>
                 {canDelete && (
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onDelete(bucket.name);
-                    }}
+                  <CapabilityGate
+                    connectionId={connectionId}
+                    capability="delete-buckets"
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onDelete(bucket.name);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </CapabilityGate>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
