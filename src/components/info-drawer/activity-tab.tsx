@@ -9,28 +9,9 @@ import { groupActivityEvents } from "@/components/activity/batch-grouping";
 import type { ActivityRow, BatchRow } from "@/components/activity/batch-grouping";
 import type { ActivityEventResponse } from "@/lib/queries/activity";
 import type { ActivityAction } from "@/generated/prisma/client";
+import { ACTION_VERBS, lastSegment, eventTarget } from "@/components/activity/event-format";
 import { Avatar } from "./avatar";
 import { formatRelativeTime } from "./format-time";
-
-const ACTION_VERBS: Record<ActivityAction, string> = {
-  UPLOAD: "uploaded",
-  DELETE: "deleted",
-  COPY: "copied",
-  MOVE: "moved",
-  RENAME: "renamed",
-  FOLDER_CREATE: "created folder",
-  TAG_CHANGE: "updated tags on",
-  BUCKET_CREATE: "created bucket",
-  BUCKET_DELETE: "deleted bucket",
-  SHARE_CREATED: "shared",
-  SHARE_REVOKED: "revoked share for",
-  MULTIPART_ABORT: "aborted",
-  VERSION_RESTORE: "restored a version of",
-  VERSION_UNDELETE: "undeleted",
-  VERSION_PURGE: "permanently deleted a version of",
-  BUCKET_VERSIONING_ENABLE: "enabled versioning on",
-  BUCKET_VERSIONING_SUSPEND: "suspended versioning on",
-};
 
 const ALL_ACTIONS: ActivityAction[] = [
   "UPLOAD",
@@ -72,25 +53,10 @@ const ACTION_LABELS: Record<ActivityAction, string> = {
   BUCKET_VERSIONING_SUSPEND: "Versioning suspend",
 };
 
-function lastSegment(path: string): string {
-  const trimmed = path.replace(/\/$/, "");
-  const idx = trimmed.lastIndexOf("/");
-  return idx === -1 ? trimmed : trimmed.slice(idx + 1);
-}
-
 function parentPath(path: string): string {
   const trimmed = path.replace(/\/$/, "");
   const idx = trimmed.lastIndexOf("/");
   return idx === -1 ? "" : trimmed.slice(0, idx + 1);
-}
-
-function eventTarget(event: ActivityEventResponse): string {
-  const { action, key, targetKey, bucket } = event;
-  if (!key) return bucket;
-  if ((action === "RENAME" || action === "MOVE") && targetKey) {
-    return `${lastSegment(key)} → ${lastSegment(targetKey)}`;
-  }
-  return lastSegment(key);
 }
 
 function eventParentPath(event: ActivityEventResponse): string | null {
