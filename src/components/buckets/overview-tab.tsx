@@ -3,7 +3,6 @@
 import { useConnections } from "@/lib/queries/connections";
 import { useBuckets } from "@/lib/queries/buckets";
 import { OverviewIdentityCard } from "./overview-identity-card";
-import { OverviewVersioningCard } from "./overview-versioning-card";
 import { OverviewStorageStatsCard } from "./overview-storage-stats-card";
 import { OverviewActivityCard } from "./overview-activity-card";
 import { OverviewIncompleteUploadsCard } from "./overview-incomplete-uploads-card";
@@ -25,16 +24,13 @@ export function OverviewTab({ connectionId, bucket }: OverviewTabProps) {
   return (
     <div className="space-y-4">
       <OverviewIdentityCard
+        connectionId={connectionId}
         bucket={bucket}
         connection={connection}
         bucketMeta={bucketMeta}
+        canEdit={!!canEdit}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OverviewVersioningCard
-          connectionId={connectionId}
-          bucket={bucket}
-          canEdit={!!canEdit}
-        />
         <OverviewStorageStatsCard
           connectionId={connectionId}
           bucket={bucket}
