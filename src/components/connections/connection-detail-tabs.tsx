@@ -6,6 +6,7 @@ import { ArrowLeft, BarChart3, Lock, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/lib/queries/connections";
 import { ConnectionOverviewTab } from "./connection-overview-tab";
+import { ConnectionPermissionsTab } from "./connection-permissions-tab";
 
 const TAB_DEFINITIONS = [
   { key: "overview", label: "Overview", icon: BarChart3 },
@@ -83,7 +84,7 @@ export function ConnectionDetailTabs({ connectionId }: ConnectionDetailTabsProps
           <ConnectionOverviewTab connectionId={connectionId} />
         )}
         {activeTab === "permissions" && (
-          <div className="text-sm text-muted-foreground">Permissions placeholder</div>
+          <ConnectionPermissionsTab connectionId={connectionId} />
         )}
       </div>
     </div>
