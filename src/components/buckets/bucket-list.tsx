@@ -18,6 +18,7 @@ import { filterNonEmptyWorkspaceGroups } from "./bucket-list-helpers";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePaletteIntentStore } from "@/lib/stores/palette-intent-store";
+import { CapabilityGate } from "@/components/health/capability-gate";
 
 interface BucketListProps {
   onOpenBucket?: (
@@ -137,10 +138,15 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
                       </span>
                     </div>
                     <div className="shrink-0">
-                      <CreateBucketDialog
+                      <CapabilityGate
                         connectionId={group.connection.id}
-                        disabled={group.connection.role !== "ADMIN"}
-                      />
+                        capability="create-buckets"
+                      >
+                        <CreateBucketDialog
+                          connectionId={group.connection.id}
+                          disabled={group.connection.role !== "ADMIN"}
+                        />
+                      </CapabilityGate>
                     </div>
                   </div>
 
@@ -179,10 +185,15 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
                       <p className="text-muted-foreground mb-4">
                         No buckets found
                       </p>
-                      <CreateBucketDialog
+                      <CapabilityGate
                         connectionId={group.connection.id}
-                        disabled={group.connection.role !== "ADMIN"}
-                      />
+                        capability="create-buckets"
+                      >
+                        <CreateBucketDialog
+                          connectionId={group.connection.id}
+                          disabled={group.connection.role !== "ADMIN"}
+                        />
+                      </CapabilityGate>
                     </div>
                   )}
                 </div>
