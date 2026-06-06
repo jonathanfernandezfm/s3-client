@@ -55,10 +55,23 @@ enum ShareLinkEventAction {
   DOWNLOAD
 }
 
+enum CrawlJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL_LIMIT_HIT
+}
+
+enum CrawlJobKind {
+  INITIAL
+  RECONCILE
+}
+
 model User {
-  id        String   @id @default(uuid())
-  clerkId   String   @unique // Clerk user ID (user_xxx)
-  email     String   @unique
+  id        String  @id @default(uuid())
+  clerkId   String  @unique // Clerk user ID (user_xxx)
+  email     String  @unique
   firstName String?
   lastName  String?
   imageUrl  String?
@@ -67,18 +80,18 @@ model User {
   subscription Subscription?
 
   // Workspace and team relationships
-  personalWorkspace Workspace?
-  teamMemberships   TeamMember[]
-  createdTeams      Team[]       @relation("TeamCreator")
+  personalWorkspace  Workspace?
+  teamMemberships    TeamMember[]
+  createdTeams       Team[]       @relation("TeamCreator")
   createdConnections Connection[] @relation("ConnectionCreator")
 
   // Usage tracking
   usageRecords UsageRecord[]
   bookmarks    Bookmark[]
 
-  activityEvents ActivityEvent[]
-  fileNotes      FileNote[]      @relation("FileNoteAuthor")
-  createdShareLinks ShareLink[]  @relation("ShareLinkCreator")
+  activityEvents    ActivityEvent[]
+  fileNotes         FileNote[]      @relation("FileNoteAuthor")
+  createdShareLinks ShareLink[]     @relation("ShareLinkCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,40 +207,42 @@ model Connection {
   createdById String?
   createdBy   User?     @relation("ConnectionCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   bookmarks      Bookmark[]
   activityEvents ActivityEvent[]
   fileNotes      FileNote[]
   shareLinks     ShareLink[]
 
-  healthCheck         ConnectionHealthCheck?
-  bucketHealthChecks  BucketHealthCheck[]
+  healthCheck        ConnectionHealthCheck?
+  bucketHealthChecks BucketHealthCheck[]
+
+  objectIndex ObjectIndex[]
+  crawlJobs   CrawlJob[]
 
   @@index([workspaceId])
-
   @@map("connections")
 }
 
 model ActivityEvent {
-  id              String         @id @default(uuid())
+  id String @id @default(uuid())
 
-  connectionId    String
-  connection      Connection     @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   userId          String?
-  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user            User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   userDisplayName String
   userImageUrl    String?
 
-  action          ActivityAction
-  bucket          String
-  key             String?
-  targetKey       String?
-  byteSize        BigInt?
-  batchId         String?
+  action    ActivityAction
+  bucket    String
+  key       String?
+  targetKey String?
+  byteSize  BigInt?
+  batchId   String?
 
-  createdAt       DateTime       @default(now())
+  createdAt DateTime @default(now())
 
   @@index([connectionId, bucket, createdAt(sort: Desc)])
   @@index([connectionId, bucket, key, createdAt(sort: Desc)])
@@ -255,22 +270,22 @@ model Bookmark {
 }
 
 model FileNote {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  connectionId    String
-  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   authorId          String?
   author            User?   @relation("FileNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   authorDisplayName String
   authorImageUrl    String?
 
-  bucket          String
-  key             String
-  body            String
+  bucket String
+  key    String
+  body   String
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([connectionId, bucket, key, createdAt(sort: Desc)])
   @@index([connectionId, bucket, createdAt(sort: Desc)])
@@ -279,14 +294,14 @@ model FileNote {
 }
 
 model ShareLink {
-  id           String   @id @default(uuid())
-  slug         String   @unique
+  id   String @id @default(uuid())
+  slug String @unique
 
   connectionId String
   connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
-  bucket       String
-  key          String
+  bucket String
+  key    String
 
   createdById          String?
   createdBy            User?   @relation("ShareLinkCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -296,14 +311,14 @@ model ShareLink {
   expiresAt    DateTime?
   passwordHash String?
   maxUses      Int?
-  useCount     Int      @default(0)
+  useCount     Int       @default(0)
   revokedAt    DateTime?
   description  String?
 
-  events       ShareLinkEvent[]
+  events ShareLinkEvent[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([connectionId, createdAt(sort: Desc)])
   @@index([connectionId, bucket, key, createdAt(sort: Desc)])
@@ -311,38 +326,38 @@ model ShareLink {
 }
 
 model ShareLinkEvent {
-  id           String   @id @default(uuid())
-  shareLinkId  String
-  shareLink    ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  shareLinkId String
+  shareLink   ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
 
-  action       ShareLinkEventAction
-  ip           String?
-  userAgent    String?
-  referrer     String?
+  action    ShareLinkEventAction
+  ip        String?
+  userAgent String?
+  referrer  String?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([shareLinkId, createdAt(sort: Desc)])
   @@map("share_link_events")
 }
 
 model ConnectionHealthCheck {
-  id           String   @id @default(uuid())
-  connectionId String   @unique
+  id           String                      @id @default(uuid())
+  connectionId String                      @unique
   checkedAt    DateTime
   durationMs   Int
-  connectivity String   // "ok" | "unreachable"
-  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectivity String // "ok" | "unreachable"
+  connection   Connection                  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   probes       ConnectionPermissionCheck[]
 
   @@map("connection_health_checks")
 }
 
 model ConnectionPermissionCheck {
-  id            String   @id @default(uuid())
+  id            String                @id @default(uuid())
   healthCheckId String
   probeKey      String
-  result        String   // "granted" | "denied" | "unsupported" | "error" | "skipped"
+  result        String // "granted" | "denied" | "unsupported" | "error" | "skipped"
   errorCode     String?
   durationMs    Int
   healthCheck   ConnectionHealthCheck @relation(fields: [healthCheckId], references: [id], onDelete: Cascade)
@@ -352,13 +367,13 @@ model ConnectionPermissionCheck {
 }
 
 model BucketHealthCheck {
-  id           String   @id @default(uuid())
+  id           String                  @id @default(uuid())
   connectionId String
   bucket       String
   checkedAt    DateTime
   durationMs   Int
-  connectivity String   // "ok" | "unreachable" | "missing-bucket"
-  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectivity String // "ok" | "unreachable" | "missing-bucket"
+  connection   Connection              @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   probes       BucketPermissionCheck[]
 
   @@unique([connectionId, bucket])
@@ -367,7 +382,7 @@ model BucketHealthCheck {
 }
 
 model BucketPermissionCheck {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   healthCheckId String
   probeKey      String
   result        String
@@ -377,4 +392,63 @@ model BucketPermissionCheck {
 
   @@unique([healthCheckId, probeKey])
   @@map("bucket_permission_checks")
+}
+
+model ObjectIndex {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  bucket String
+  key    String
+
+  size         BigInt
+  lastModified DateTime
+  etag         String?
+
+  extension String?
+  mime      String?
+
+  tags Json @default("[]")
+
+  lastSeenAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, bucket, key])
+  @@index([workspaceId, lastModified(sort: Desc)])
+  @@index([connectionId, lastSeenAt])
+  @@map("object_index")
+}
+
+model CrawlJob {
+  id String @id @default(uuid())
+
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  kind   CrawlJobKind
+  status CrawlJobStatus @default(PENDING)
+
+  currentBucket         String?
+  bucketsRemaining      String[]
+  nextContinuationToken String?
+
+  objectsIndexed Int @default(0)
+
+  startedAt   DateTime?
+  lastTickAt  DateTime?
+  completedAt DateTime?
+
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  @@index([connectionId, kind, status])
+  @@index([status, lastTickAt])
+  @@map("crawl_jobs")
 }
