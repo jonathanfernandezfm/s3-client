@@ -243,15 +243,47 @@ export async function updateConnection(
     return null;
   }
 
+  const credentialFields: Array<keyof ConnectionUpdate> = [
+    "endpoint",
+    "accessKeyId",
+    "secretAccessKey",
+    "region",
+    "forcePathStyle",
+  ];
+  const credentialsChanged = credentialFields.some((field) => {
+    const next = data[field];
+    if (next === undefined) return false;
+    const current = (access.connection as Record<string, unknown>)[field];
+    return next !== current;
+  });
+
   const updateData = { ...data };
   if (updateData.secretAccessKey) {
     updateData.secretAccessKey = encrypt(updateData.secretAccessKey);
   }
 
-  return prisma.connection.update({
-    where: { id },
-    data: updateData,
+  const updated = await prisma.$transaction(async (tx) => {
+    if (credentialsChanged) {
+      await tx.connectionHealthCheck.deleteMany({ where: { connectionId: id } });
+      await tx.bucketHealthCheck.deleteMany({ where: { connectionId: id } });
+    }
+    return tx.connection.update({
+      where: { id },
+      data: updateData,
+    });
   });
+
+  if (credentialsChanged) {
+    const { runConnectionHealthCheck } = await import("@/lib/health/runner");
+    runConnectionHealthCheck(id).catch((err) => {
+      console.error(
+        `[health] re-run after credential edit failed for ${id}:`,
+        err,
+      );
+    });
+  }
+
+  return updated;
 }
 
 /**
