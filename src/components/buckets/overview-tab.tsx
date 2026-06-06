@@ -7,6 +7,7 @@ import { OverviewVersioningCard } from "./overview-versioning-card";
 import { OverviewStorageStatsCard } from "./overview-storage-stats-card";
 import { OverviewActivityCard } from "./overview-activity-card";
 import { OverviewIncompleteUploadsCard } from "./overview-incomplete-uploads-card";
+import { PermissionsCard } from "@/components/health/permissions-card";
 
 interface OverviewTabProps {
   connectionId: string;
@@ -43,6 +44,7 @@ export function OverviewTab({ connectionId, bucket }: OverviewTabProps) {
           connectionId={connectionId}
           bucket={bucket}
         />
+        <PermissionsCard connectionId={connectionId} bucket={bucket} />
       </div>
     </div>
   );
