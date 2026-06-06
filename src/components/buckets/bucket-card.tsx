@@ -119,7 +119,7 @@ export function BucketCard({
                     e.preventDefault();
                     e.stopPropagation();
                     router.push(
-                      `/buckets/${connectionId}/${encodeURIComponent(bucket.name)}?tab=multipart`
+                      `/buckets/${connectionId}/${encodeURIComponent(bucket.name)}?tab=overview`
                     );
                   }}
                 >
