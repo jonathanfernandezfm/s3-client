@@ -10,6 +10,8 @@ import {
 } from "@/lib/db/connections";
 import { canCreateConnection } from "@/lib/subscriptions";
 import { runConnectionHealthCheck } from "@/lib/health/runner";
+import prisma from "@/lib/db/prisma";
+import { isSearchIndexEnabled } from "@/lib/search/feature-flag";
 
 // GET /api/connections - List user's connections
 export const GET = withAuth(async (req, { user }) => {
@@ -109,6 +111,35 @@ export const POST = withAuth(async (req, { user }) => {
       err,
     );
   });
+
+  // Enqueue initial crawl for PRO+ users if search indexing is enabled
+  if (isSearchIndexEnabled()) {
+    const searchTier = user.subscription?.tier ?? "FREE";
+    if (searchTier !== "FREE") {
+      try {
+        const job = await prisma.crawlJob.create({
+          data: {
+            connectionId: connection.id,
+            kind: "INITIAL",
+            status: "PENDING",
+            bucketsRemaining: [],
+          },
+        });
+        const token = process.env.INTERNAL_API_TOKEN;
+        const baseUrl = req.nextUrl.origin;
+        if (token) {
+          fetch(`${baseUrl}/api/internal/crawl?jobId=${job.id}`, {
+            method: "POST",
+            headers: { "x-internal-token": token },
+          }).catch((err) => {
+            console.error(`[search-index] initial crawl fire failed for ${connection.id}:`, err);
+          });
+        }
+      } catch (err) {
+        console.error(`[search-index] failed to enqueue initial crawl for ${connection.id}:`, err);
+      }
+    }
+  }
 
   return NextResponse.json({
     id: connection.id,
