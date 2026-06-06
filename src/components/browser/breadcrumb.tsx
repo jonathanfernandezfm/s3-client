@@ -109,7 +109,7 @@ export function Breadcrumb({
       </Link>
 
       <Link
-        href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}?tab=multipart`}
+        href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}?tab=overview`}
         className="ml-1 p-1 rounded hover:bg-accent text-muted-foreground/60 hover:text-foreground shrink-0"
         title="Bucket settings"
         onClick={(e) => e.stopPropagation()}

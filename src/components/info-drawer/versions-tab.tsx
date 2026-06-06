@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/utils";
 import { formatRelativeTime } from "./format-time";
 import type { S3ObjectVersion } from "@/types/s3";
+import Link from "next/link";
 import { ChevronDown, ChevronRight, Trash2, History } from "lucide-react";
 
 type Filter = "all" | "deleted" | "older";
@@ -46,8 +47,14 @@ export function VersionsTab() {
 
   if (!hasVersioning) {
     return (
-      <div className="p-4 text-xs text-muted-foreground">
-        This bucket has no version history. Enable versioning in the bucket header to start tracking changes.
+      <div className="p-4 text-xs text-muted-foreground space-y-2">
+        <p>Versioning is not enabled for this bucket.</p>
+        <Link
+          href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}?tab=overview`}
+          className="inline-flex items-center gap-1 text-foreground underline underline-offset-2 hover:opacity-70"
+        >
+          Enable versioning in bucket settings
+        </Link>
       </div>
     );
   }

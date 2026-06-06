@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, ArrowRight } from "lucide-react";
+import { Activity, ArrowRight, Clock } from "lucide-react";
 import { useActivity } from "@/lib/queries/activity";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { Avatar } from "@/components/info-drawer/avatar";
@@ -29,14 +29,14 @@ export function OverviewActivityCard({
   };
 
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-muted-foreground" />
           Recent activity
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col flex-1 space-y-3">
         {isLoading && (
           <p className="text-sm text-muted-foreground">Loading…</p>
         )}
@@ -46,45 +46,61 @@ export function OverviewActivityCard({
           </p>
         )}
         {!isLoading && !isError && recent.length === 0 && (
-          <p className="text-sm text-muted-foreground">No activity yet.</p>
+          <div className="flex flex-col flex-1 items-center justify-center text-center">
+            <Clock className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm font-semibold mb-1">No activity yet</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              Actions in this bucket will appear here.
+            </p>
+            <button
+              type="button"
+              onClick={openDrawer}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              View activity log
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
         )}
         {!isLoading && !isError && recent.length > 0 && (
-          <ul className="space-y-2">
-            {recent.map((event) => (
-              <li
-                key={event.id}
-                className="flex items-start gap-2 text-sm"
-              >
-                <Avatar
-                  userId={event.userId}
-                  displayName={event.userDisplayName}
-                  imageUrl={event.userImageUrl}
-                  size={20}
-                />
-                <div className="min-w-0 flex-1">
-                  <span className="font-medium">{event.userDisplayName}</span>{" "}
-                  <span className="text-muted-foreground">
-                    {ACTION_VERBS[event.action]}
-                  </span>{" "}
-                  <span className="font-mono text-xs truncate">
-                    {eventTarget(event)}
-                  </span>
-                  <div className="text-xs text-muted-foreground">
-                    {formatRelativeTime(event.createdAt)}
+          <>
+            <ul className="space-y-2">
+              {recent.map((event) => (
+                <li
+                  key={event.id}
+                  className="flex items-start gap-2 text-sm"
+                >
+                  <Avatar
+                    userId={event.userId}
+                    displayName={event.userDisplayName}
+                    imageUrl={event.userImageUrl}
+                    size={20}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium">{event.userDisplayName}</span>{" "}
+                    <span className="text-muted-foreground">
+                      {ACTION_VERBS[event.action]}
+                    </span>{" "}
+                    <span className="font-mono text-xs truncate">
+                      {eventTarget(event)}
+                    </span>
+                    <div className="text-xs text-muted-foreground">
+                      {formatRelativeTime(event.createdAt)}
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={openDrawer}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              View all activity
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          onClick={openDrawer}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          View all activity
-          <ArrowRight className="h-3 w-3" />
-        </button>
       </CardContent>
     </Card>
   );

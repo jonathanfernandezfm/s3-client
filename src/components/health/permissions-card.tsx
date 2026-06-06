@@ -3,37 +3,14 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import {
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  RefreshCw,
-  Minus,
-  AlertTriangle,
-  HelpCircle,
-} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useBucketHealth,
   useRunBucketHealth,
 } from "@/lib/queries/health";
-import type { CapabilityStatus } from "@/lib/health/probe";
-
-function StatusIcon({ status }: { status: CapabilityStatus }) {
-  switch (status) {
-    case "available":
-      return <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />;
-    case "unavailable":
-      return <XCircle className="h-3.5 w-3.5 text-destructive" />;
-    case "unsupported":
-      return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
-    case "untested":
-      return <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />;
-    default:
-      return <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />;
-  }
-}
 
 interface PermissionsCardProps {
   connectionId: string;
@@ -41,6 +18,7 @@ interface PermissionsCardProps {
 }
 
 export function PermissionsCard({ connectionId, bucket }: PermissionsCardProps) {
+  const pathname = usePathname();
   const { data: report, isLoading, isError } = useBucketHealth(
     connectionId,
     bucket,
@@ -92,53 +70,26 @@ export function PermissionsCard({ connectionId, bucket }: PermissionsCardProps) 
 
   if (!report) return null;
 
-  const available = report.capabilities.filter(
-    (c) => c.status === "available",
-  ).length;
-  const unavailable = report.capabilities.filter(
-    (c) => c.status === "unavailable",
-  ).length;
+  const available = report.capabilities.filter((c) => c.status === "available").length;
+  const unavailable = report.capabilities.filter((c) => c.status === "unavailable").length;
+  const unsupported = report.capabilities.filter((c) => c.status === "unsupported").length;
+  const total = report.capabilities.length;
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-sm">Permissions</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {available} of {report.capabilities.length} available
-              {unavailable > 0 ? ` · ${unavailable} unavailable` : ""}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => runHealth.mutate({ connectionId, bucket })}
-            disabled={runHealth.isPending}
-            title="Refresh permissions"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${runHealth.isPending ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
+        <CardTitle className="text-sm">Permissions</CardTitle>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {available} of {total} available{unavailable > 0 ? ` · ${unavailable} unavailable` : ""}{unsupported > 0 ? ` · ${unsupported} unsupported` : ""}
+        </p>
+        {report.connectivity !== "ok" && (
+          <p className="text-xs text-yellow-600 mt-1">Endpoint unreachable</p>
+        )}
       </CardHeader>
-      <CardContent className="space-y-1">
-        {report.capabilities.map((cap) => (
-          <div key={cap.key} className="flex items-center gap-2 text-sm">
-            <StatusIcon status={cap.status} />
-            <span className="text-muted-foreground">{cap.label}</span>
-          </div>
-        ))}
-        <div className="pt-2">
-          <Link
-            href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}/health`}
-            className="text-xs text-primary hover:underline"
-          >
-            View full report →
-          </Link>
-        </div>
+      <CardContent>
+        <Link href={`${pathname}?tab=permissions`} className="text-xs text-primary hover:underline">
+          View permissions →
+        </Link>
       </CardContent>
     </Card>
   );

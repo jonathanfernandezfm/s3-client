@@ -8,6 +8,7 @@ import { useConnections } from "@/lib/queries/connections";
 import { ComingSoonTab } from "./coming-soon-tab";
 import { MultipartUploadsTab } from "./multipart-uploads-tab";
 import { OverviewTab } from "./overview-tab";
+import { PermissionsTab } from "./permissions-tab";
 
 const TAB_DEFINITIONS = [
   { key: "overview", label: "Overview", icon: BarChart3 },
@@ -100,10 +101,7 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
           />
         )}
         {activeTab === "permissions" && (
-          <ComingSoonTab
-            title="Permissions coming soon"
-            description="Manage bucket policy and public access block settings."
-          />
+          <PermissionsTab connectionId={connectionId} bucket={bucket} />
         )}
       </div>
     </div>
