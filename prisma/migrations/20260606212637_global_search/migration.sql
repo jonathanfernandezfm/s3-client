@@ -1,6 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS btree_gin;
-CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- CreateEnum
 CREATE TYPE "CrawlJobStatus" AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'PARTIAL_LIMIT_HIT');
@@ -74,10 +73,7 @@ ALTER TABLE "object_index"
     lower("bucket" || ' ' || replace("key", '/', ' '))
   ) STORED;
 
--- Trigram GIN index for fuzzy search on the generated column.
+-- Composite GIN index: btree_gin lets workspaceId be the leading btree column,
+-- so the planner can narrow by workspace before fuzzy-matching on search_text.
 CREATE INDEX "idx_object_index_search"
-  ON "object_index" USING gin ("search_text" gin_trgm_ops);
-
--- Btree index to narrow by workspace before fuzzy-matching.
-CREATE INDEX "idx_object_index_workspace"
-  ON "object_index" ("workspaceId");
+  ON "object_index" USING gin ("workspaceId", "search_text" gin_trgm_ops);
