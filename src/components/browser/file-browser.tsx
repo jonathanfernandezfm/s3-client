@@ -37,6 +37,7 @@ import { useNotesForKey, useNoteCounts } from "@/lib/queries/notes";
 import { useShareLinkCounts } from "@/lib/queries/share-links";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import { useBucketVersioning } from "@/lib/queries/buckets";
+import { CapabilityGate } from "@/components/health/capability-gate";
 import type { S3Object } from "@/types";
 
 interface FileBrowserProps {
@@ -489,20 +490,24 @@ export function FileBrowser({
           >
             <History className="h-4 w-4" />
           </Button>
-          <UploadButton
-            connectionId={connectionId}
-            bucket={bucket}
-            currentPath={currentPath}
-            disabled={!canWrite}
-          />
-          <CreateFolderDialog
-            connectionId={connectionId}
-            bucket={bucket}
-            currentPath={currentPath}
-            disabled={!canWrite}
-            open={createFolderOpen}
-            onOpenChange={setCreateFolderOpen}
-          />
+          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="upload-objects">
+            <UploadButton
+              connectionId={connectionId}
+              bucket={bucket}
+              currentPath={currentPath}
+              disabled={!canWrite}
+            />
+          </CapabilityGate>
+          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="upload-objects">
+            <CreateFolderDialog
+              connectionId={connectionId}
+              bucket={bucket}
+              currentPath={currentPath}
+              disabled={!canWrite}
+              open={createFolderOpen}
+              onOpenChange={setCreateFolderOpen}
+            />
+          </CapabilityGate>
           <Button variant="outline" size="icon" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
