@@ -34,7 +34,7 @@ import {
   Loader2,
   Briefcase,
   Users,
-  ShieldCheck,
+  Settings,
 } from "lucide-react";
 import { SearchIndexStatus } from "./search-index-status";
 
@@ -197,8 +197,7 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                           {connection.role}
                         </span>
                       </div>
-                      {canManage(connection) && (
-                        <DropdownMenu>
+                      <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
@@ -209,36 +208,36 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => onEdit(connection)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                              Edit
+                            <DropdownMenuItem asChild>
+                              <Link href={`/connections/${connection.id}?tab=overview`}>
+                                <Settings className="h-4 w-4" />
+                                Settings
+                              </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeletingConnection(connection)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
+                            {canManage(connection) && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => onEdit(connection)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => setDeletingConnection(connection)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate pl-6">
                       {connection.endpoint}
                     </p>
                     <div className="mt-2 pl-6">
-                      <Link
-                        href={`/connections/${connection.id}/health`}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
-                      >
-                        <ShieldCheck className="h-3 w-3" />
-                        Health check
-                      </Link>
-                    </div>
-                    <div className="mt-1 pl-6">
                       <SearchIndexStatus connectionId={connection.id} />
                     </div>
                   </Card>
