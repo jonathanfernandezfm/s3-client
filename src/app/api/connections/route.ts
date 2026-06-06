@@ -9,6 +9,7 @@ import {
   type ConnectionInput,
 } from "@/lib/db/connections";
 import { canCreateConnection } from "@/lib/subscriptions";
+import { runConnectionHealthCheck } from "@/lib/health/runner";
 
 // GET /api/connections - List user's connections
 export const GET = withAuth(async (req, { user }) => {
@@ -99,6 +100,15 @@ export const POST = withAuth(async (req, { user }) => {
       { status: 403 }
     );
   }
+
+  // Non-blocking onboarding diagnostic — kick off the connection-level
+  // health check so the report is ready when the user lands on the page.
+  runConnectionHealthCheck(connection.id).catch((err) => {
+    console.error(
+      `[health] initial connection check failed for ${connection.id}:`,
+      err,
+    );
+  });
 
   return NextResponse.json({
     id: connection.id,
