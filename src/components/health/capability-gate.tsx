@@ -41,7 +41,7 @@ export function CapabilityGate({
     : child;
 
   const reportHref = bucket
-    ? `/connections/${connectionId}/buckets/${encodeURIComponent(bucket)}/health`
+    ? `/buckets/${connectionId}/${encodeURIComponent(bucket)}/health`
     : `/connections/${connectionId}/health`;
 
   return (

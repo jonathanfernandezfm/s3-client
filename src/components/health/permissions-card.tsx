@@ -133,7 +133,7 @@ export function PermissionsCard({ connectionId, bucket }: PermissionsCardProps) 
         ))}
         <div className="pt-2">
           <Link
-            href={`/connections/${connectionId}/buckets/${encodeURIComponent(bucket)}/health`}
+            href={`/buckets/${connectionId}/${encodeURIComponent(bucket)}/health`}
             className="text-xs text-primary hover:underline"
           >
             View full report →
