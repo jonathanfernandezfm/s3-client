@@ -30,7 +30,7 @@ export const POST = withAuth<RouteContext>(async (req, { user, params }) => {
   }
 
   const existing = await prisma.crawlJob.findFirst({
-    where: { connectionId: id },
+    where: { connectionId: id, status: { in: ["PENDING", "RUNNING"] } },
     select: { id: true },
   });
   if (existing) {

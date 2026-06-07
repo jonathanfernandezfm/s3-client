@@ -37,7 +37,8 @@ export function useTriggerSearchIndex() {
   return useMutation<
     { ok: true; jobId: string; state: "indexing" },
     TriggerError,
-    string
+    string,
+    { previous?: SearchIndexStatus }
   >({
     mutationFn: async (connectionId) => {
       const res = await fetch(
@@ -66,7 +67,13 @@ export function useTriggerSearchIndex() {
         queryKey: queryKeys.searchIndex.status(connectionId),
       });
     },
-    onError: (err, connectionId) => {
+    onError: (err, connectionId, context) => {
+      if (context?.previous !== undefined) {
+        qc.setQueryData(
+          queryKeys.searchIndex.status(connectionId),
+          context.previous,
+        );
+      }
       qc.invalidateQueries({
         queryKey: queryKeys.searchIndex.status(connectionId),
       });
