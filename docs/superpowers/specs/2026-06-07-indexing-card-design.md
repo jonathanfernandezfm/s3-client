@@ -52,7 +52,7 @@ The card resolves its variant from `tier` (from `useTier()`) and `state` (from t
 1. `isSearchIndexEnabled()` → 503 `{ error: "Search indexing not available" }` if env flag is off.
 2. `getConnectionAccessById(id, user.id)` → 404 `{ error: "Not found" }` if user can't reach this connection (matches the pattern in the existing status route).
 3. Tier check — `user.subscription?.tier` must be `"PRO"` or `"ENTERPRISE"`, else 402 `{ error: "PRO subscription required" }`.
-4. No-existing-job guard — `prisma.crawlJob.findFirst({ where: { connectionId: id } })` must return `null`, else 409 `{ error: "Index already started", state: "<derived>" }`. This is the on-server enforcement of "if crawling has been done, don't allow it" and prevents two concurrent INITIAL jobs from racing.
+4. No-existing-job guard — `prisma.crawlJob.findFirst({ where: { connectionId: id } })` must return `null`, else 409 `{ error: "Index already started", jobId: existing.id }`. The client invalidates its status cache on 409 and re-fetches the real state from the GET endpoint. This is the on-server enforcement of "if crawling has been done, don't allow it" and prevents two concurrent INITIAL jobs from racing.
 
 **On success:**
 1. `prisma.crawlJob.create({ data: { connectionId: id, kind: "INITIAL", status: "PENDING", bucketsRemaining: [] } })` — same shape as the reconcile route's create call.
@@ -89,7 +89,7 @@ export function useSearchIndexStatus(connectionId: string) {
 
 export function useTriggerSearchIndex() {
   const qc = useQueryClient();
-  const openUpgrade = useUpgradeModalStore.getState().open;
+  const openUpgrade = useUpgradeModalStore((s) => s.open);
   return useMutation({
     mutationFn: async (connectionId: string) => {
       const res = await fetch(`/api/connections/${connectionId}/search-index/trigger`, {
