@@ -220,3 +220,50 @@
 		color: var(--foreground);
 	}
 }
+
+/* ---------- Landing page (scoped to .landing) ---------- */
+
+.landing {
+	--accent-amber: oklch(0.83 0.16 85);
+	--accent-amber-glow: oklch(0.83 0.16 85 / 0.25);
+	--landing-bg: oklch(0.12 0 0);
+	--landing-muted: oklch(0.7 0 0);
+}
+
+@keyframes landing-glow-pulse {
+	0%,
+	100% {
+		opacity: 0.7;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+@keyframes landing-marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+.landing .animate-glow-pulse {
+	animation: landing-glow-pulse 8s ease-in-out infinite;
+}
+
+.landing .animate-marquee {
+	animation: landing-marquee 35s linear infinite;
+}
+
+.landing .marquee-group:hover .animate-marquee {
+	animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.landing .animate-glow-pulse,
+	.landing .animate-marquee {
+		animation: none;
+	}
+}
