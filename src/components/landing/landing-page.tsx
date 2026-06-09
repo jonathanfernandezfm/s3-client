@@ -1,5 +1,6 @@
 import { Nav } from "./nav";
 import { Hero } from "./hero";
+import { ProblemSplit } from "./problem-split";
 import { Footer } from "./footer";
 
 /**
@@ -14,6 +15,7 @@ export function LandingPage() {
       <Nav />
       <main>
         <Hero />
+        <ProblemSplit />
       </main>
       <Footer />
     </div>
