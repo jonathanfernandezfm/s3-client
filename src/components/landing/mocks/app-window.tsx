@@ -34,9 +34,9 @@ export function AppWindow({
       )}
     >
       <div className="flex items-center gap-2 border-b border-white/5 px-4 py-2.5">
-        <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="size-2.5 rounded-full bg-[#febc2e]" />
-        <span className="size-2.5 rounded-full bg-[#28c840]" />
+        <span aria-hidden className="size-2.5 rounded-full bg-[#ff5f57]" />
+        <span aria-hidden className="size-2.5 rounded-full bg-[#febc2e]" />
+        <span aria-hidden className="size-2.5 rounded-full bg-[#28c840]" />
         {title && (
           <span className="ml-3 truncate font-mono text-xs text-white/40">{title}</span>
         )}

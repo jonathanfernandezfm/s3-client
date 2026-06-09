@@ -1,4 +1,4 @@
-import { Archive, FileText, Film, Folder, Image as ImageIcon } from "lucide-react";
+import { Archive, FileText, Film, Folder, Image as ImageIcon, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type FileKind = "folder" | "image" | "doc" | "archive" | "video";
@@ -9,7 +9,7 @@ export interface FileItem {
   highlighted?: boolean;
 }
 
-const ICONS: Record<FileKind, typeof Folder> = {
+const ICONS: Record<FileKind, LucideIcon> = {
   folder: Folder,
   image: ImageIcon,
   doc: FileText,
@@ -17,13 +17,15 @@ const ICONS: Record<FileKind, typeof Folder> = {
   video: Film,
 };
 
+export interface FileGridProps {
+  items: FileItem[];
+  className?: string;
+}
+
 export function FileGrid({
   items,
   className,
-}: {
-  items: FileItem[];
-  className?: string;
-}) {
+}: FileGridProps) {
   return (
     <div className={cn("grid grid-cols-3 gap-2 p-3 sm:grid-cols-4", className)}>
       {items.map((item) => {
