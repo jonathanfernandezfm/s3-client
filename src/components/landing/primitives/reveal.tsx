@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -12,7 +13,13 @@ interface RevealProps {
 
 /** Fades + rises children into view on scroll. Renders statically under reduced motion. */
 export function Reveal({ children, delay = 0, className }: RevealProps) {
-  const reduced = useReducedMotion();
+  const prefersReduced = useReducedMotion();
+  // Defer the reduced-motion check past hydration: the server always renders
+  // the animated branch, so server and first client render must agree.
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    setReduced(!!prefersReduced);
+  }, [prefersReduced]);
 
   if (reduced) {
     return <div className={className}>{children}</div>;

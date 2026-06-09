@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 
 interface ParallaxProps {
@@ -13,7 +13,13 @@ interface ParallaxProps {
 /** Scroll-linked vertical drift. Renders statically under reduced motion. */
 export function Parallax({ children, speed = 40, className }: ParallaxProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
+  const prefersReduced = useReducedMotion();
+  // Defer the reduced-motion check past hydration: the server always renders
+  // the animated branch, so server and first client render must agree.
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    setReduced(!!prefersReduced);
+  }, [prefersReduced]);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"],
