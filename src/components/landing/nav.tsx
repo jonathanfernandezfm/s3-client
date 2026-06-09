@@ -12,7 +12,7 @@ const LINKS = [
 export function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-4">
-      <nav className="mx-auto mt-4 flex max-w-5xl items-center justify-between rounded-2xl border border-white/10 bg-black/50 px-4 py-2.5 backdrop-blur-xl">
+      <nav aria-label="Main" className="mx-auto mt-4 flex max-w-5xl items-center justify-between rounded-2xl border border-white/10 bg-black/50 px-4 py-2.5 backdrop-blur-xl">
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.png"

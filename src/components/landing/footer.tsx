@@ -76,7 +76,7 @@ export function Footer() {
           <a href="https://github.com" className="transition-colors hover:text-white">
             GitHub
           </a>
-          <a href="https://x.com" className="transition-colors hover:text-white">
+          <a href="https://x.com" aria-label="X (formerly Twitter)" className="transition-colors hover:text-white">
             X
           </a>
         </div>
