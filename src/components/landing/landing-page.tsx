@@ -3,6 +3,7 @@ import { Hero } from "./hero";
 import { ProblemSplit } from "./problem-split";
 import { MetaphorReveal } from "./metaphor-reveal";
 import { FeatureBento } from "./feature-bento";
+import { TransferArc } from "./transfer-arc";
 import { Compatibility } from "./compatibility";
 import { Teams } from "./teams";
 import { Footer } from "./footer";
@@ -22,6 +23,7 @@ export function LandingPage() {
         <ProblemSplit />
         <MetaphorReveal />
         <FeatureBento />
+        <TransferArc />
         <Compatibility />
         <Teams />
       </main>
