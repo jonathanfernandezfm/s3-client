@@ -3,6 +3,7 @@ import { Hero } from "./hero";
 import { ProblemSplit } from "./problem-split";
 import { FeatureBento } from "./feature-bento";
 import { Compatibility } from "./compatibility";
+import { Teams } from "./teams";
 import { Footer } from "./footer";
 
 /**
@@ -20,6 +21,7 @@ export function LandingPage() {
         <ProblemSplit />
         <FeatureBento />
         <Compatibility />
+        <Teams />
       </main>
       <Footer />
     </div>
