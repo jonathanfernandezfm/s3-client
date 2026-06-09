@@ -6,6 +6,7 @@ import { FeatureBento } from "./feature-bento";
 import { TransferArc } from "./transfer-arc";
 import { Compatibility } from "./compatibility";
 import { Teams } from "./teams";
+import { Pricing } from "./pricing";
 import { Footer } from "./footer";
 
 /**
@@ -26,6 +27,7 @@ export function LandingPage() {
         <TransferArc />
         <Compatibility />
         <Teams />
+        <Pricing />
       </main>
       <Footer />
     </div>

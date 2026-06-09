@@ -12,25 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import { useTier } from "@/hooks/use-tier";
-
-const PRO_FEATURES = [
-  "10 connections",
-  "Unlimited file uploads",
-  "50,000 operations/month",
-  "Share links (password, expiry, analytics)",
-  "1 team · 5 members",
-  "90-day activity history",
-];
-
-const FREE_FEATURES = [
-  "2 connections",
-  "50 MB file uploads",
-  "1,000 operations/month",
-  "File notes",
-  "30-day activity history",
-];
-
-const FREE_MISSING = ["Share links", "Teams"];
+import { PLAN_DISPLAYS } from "@/lib/subscriptions/plan-display";
 
 interface PlansModalProps {
   /** When provided, the modal is controlled externally (e.g. from BillingTab). */
@@ -63,6 +45,10 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
     }
   }
 
+  const freePlan = PLAN_DISPLAYS.find((p) => p.id === "free")!;
+  const proPlan = PLAN_DISPLAYS.find((p) => p.id === "pro")!;
+  const enterprisePlan = PLAN_DISPLAYS.find((p) => p.id === "enterprise")!;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -79,16 +65,16 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
               Free
             </p>
-            <p className="mt-1 text-2xl font-bold">$0</p>
+            <p className="mt-1 text-2xl font-bold">{freePlan.price}</p>
             <p className="text-xs text-muted-foreground">forever</p>
             <div className="mt-4 space-y-1.5 border-t pt-4">
-              {FREE_FEATURES.map((f) => (
+              {freePlan.features.map((f) => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Check className="h-3 w-3 shrink-0 text-green-500" />
                   {f}
                 </div>
               ))}
-              {FREE_MISSING.map((f) => (
+              {(freePlan.missing ?? []).map((f) => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground/50">
                   <X className="h-3 w-3 shrink-0" />
                   {f}
@@ -108,10 +94,10 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
             <p className="text-xs font-medium uppercase tracking-widest text-blue-400">
               Pro
             </p>
-            <p className="mt-1 text-2xl font-bold">$4</p>
+            <p className="mt-1 text-2xl font-bold">{proPlan.price}</p>
             <p className="text-xs text-muted-foreground">per month</p>
             <div className="mt-4 space-y-1.5 border-t pt-4">
-              {PRO_FEATURES.map((f) => (
+              {proPlan.features.map((f) => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Check className="h-3 w-3 shrink-0 text-green-500" />
                   {f}
@@ -136,17 +122,10 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
               Enterprise
             </p>
-            <p className="mt-1 text-2xl font-bold">Custom</p>
+            <p className="mt-1 text-2xl font-bold">{enterprisePlan.price}</p>
             <p className="text-xs text-muted-foreground">&nbsp;</p>
             <div className="mt-4 space-y-1.5 border-t pt-4">
-              {[
-                "Unlimited connections",
-                "Unlimited uploads",
-                "All PRO features",
-                "Unlimited teams",
-                "Unlimited activity history",
-                "Priority support + SLA",
-              ].map((f) => (
+              {enterprisePlan.features.map((f) => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Check className="h-3 w-3 shrink-0 text-green-500" />
                   {f}
