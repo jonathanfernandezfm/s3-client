@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Play } from "lucide-react";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { Glow } from "./primitives/glow";
 import { GridBg } from "./primitives/grid-bg";
 import { AppWindow } from "./mocks/app-window";
 import { FileGrid, type FileItem } from "./mocks/file-grid";
 import { VideoModal } from "./video-modal";
+import { useReducedMotionSafe } from "./primitives/use-reduced-motion-safe";
 
 const HEADLINE = ["S3,", "finally", "usable."];
 
@@ -26,13 +27,7 @@ const HERO_FILES: FileItem[] = [
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
   const [videoOpen, setVideoOpen] = useState(false);
-  const prefersReduced = useReducedMotion();
-  // Defer the reduced-motion check past hydration: the server always renders
-  // the animated branch, so server and first client render must agree.
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    setReduced(!!prefersReduced);
-  }, [prefersReduced]);
+  const reduced = useReducedMotionSafe();
 
   const { scrollYProgress } = useScroll({
     target: ref,
