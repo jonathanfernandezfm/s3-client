@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useInView } from "motion/react";
 import { Copy, Link2, Shield, Users } from "lucide-react";
 import { Reveal } from "./primitives/reveal";
 import { useLoop } from "./primitives/use-loop";
+import { useReducedMotionSafe } from "./primitives/use-reduced-motion-safe";
 
 function ShareLinkCard() {
   return (
@@ -91,6 +92,7 @@ export function Teams() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { margin: "-15% 0px" });
   const active = useLoop(CARDS.length, 3500, inView);
+  const reduced = useReducedMotionSafe();
 
   return (
     <section className="px-6 py-32">
@@ -118,10 +120,10 @@ export function Teams() {
           <AnimatePresence mode="wait">
             <motion.div
               key={CARDS[active].id}
-              initial={{ opacity: 0, y: 16, rotateX: -8 }}
+              initial={reduced ? false : { opacity: 0, y: 16, rotateX: -8 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.45 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, y: -16 }}
+              transition={{ duration: reduced ? 0.2 : 0.45 }}
               className="relative"
             >
               {CARDS[active].node}
