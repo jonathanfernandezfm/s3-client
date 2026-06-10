@@ -59,7 +59,7 @@ export default function AuthLayout({
       </div>
 
       {/* Right: auth form */}
-      <div className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
+      <div className="relative z-10 flex flex-1 items-center justify-center bg-[var(--accent-amber)]/[0.06] p-6 sm:p-8">
         <div className="w-full max-w-md">
           <Link
             href="/"
