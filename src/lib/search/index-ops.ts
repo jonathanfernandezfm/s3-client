@@ -200,3 +200,35 @@ export async function indexUpdateTags(input: {
     }
   }
 }
+
+export async function indexTagsForKeys(input: {
+  connectionId: string;
+  bucket: string;
+  keys: string[];
+}): Promise<Record<string, string[]>> {
+  const result: Record<string, string[]> = {};
+
+  if (!isSearchIndexEnabled()) return result;
+
+  try {
+    const rows = await prisma.objectIndex.findMany({
+      where: {
+        connectionId: input.connectionId,
+        bucket: input.bucket,
+        key: { in: input.keys },
+      },
+      select: { key: true, tags: true },
+    });
+
+    for (const row of rows) {
+      const tags = Array.isArray(row.tags)
+        ? (row.tags as string[])
+        : [];
+      result[row.key] = tags;
+    }
+  } catch (err) {
+    logFailure("tagsForKeys", { connectionId: input.connectionId, bucket: input.bucket, count: input.keys.length }, err);
+  }
+
+  return result;
+}
