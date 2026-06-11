@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/shared/app-sidebar";
 import { Header } from "@/components/shared/header";
 import { DragProvider } from "@/lib/contexts/drag-context";
 import { Notifications } from "@/components/shared/notifications";
+import { UploadManager } from "@/components/browser/upload-manager";
 import { CommandPaletteMount } from "@/components/command-palette/command-palette-mount";
 import { InfoDrawer } from "@/components/info-drawer/info-drawer";
 import { VersionHistoryDialog } from "@/components/versions/version-history-dialog";
@@ -26,6 +27,7 @@ export default function DashboardLayout({
       <InfoDrawer />
       <VersionHistoryDialog />
       <Notifications />
+      <UploadManager />
       <CommandPaletteMount />
       <PlansModal />
     </DragProvider>
