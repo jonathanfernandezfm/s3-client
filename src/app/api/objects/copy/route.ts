@@ -72,6 +72,7 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
+    // Copy reads from source and writes to target, so only the target requires write access.
     if (!canManageFiles(targetAccess.role)) {
       return NextResponse.json(
         { error: "You do not have permission to write to the target connection" },
