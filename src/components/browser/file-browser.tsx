@@ -18,7 +18,7 @@ import { Breadcrumb } from "./breadcrumb";
 import { FileList } from "./file-list";
 import { FileGallery } from "./file-gallery";
 import { ViewModeToggle } from "./view-mode-toggle";
-import { UploadZone, UploadButton } from "./upload-zone";
+import { UploadZone, UploadButton, UploadFolderButton } from "./upload-zone";
 import { CreateFolderDialog } from "./create-folder-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { FilePreviewModal } from "@/components/preview/file-preview-modal";
@@ -504,6 +504,14 @@ export function FileBrowser({
           </CapabilityGate>
           <CapabilityGate connectionId={connectionId} bucket={bucket} capability="upload-objects">
             <UploadButton
+              connectionId={connectionId}
+              bucket={bucket}
+              currentPath={currentPath}
+              disabled={!canWrite}
+            />
+          </CapabilityGate>
+          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="upload-objects">
+            <UploadFolderButton
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}

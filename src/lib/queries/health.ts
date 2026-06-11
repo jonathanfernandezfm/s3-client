@@ -154,6 +154,27 @@ export function useRunBucketHealth() {
   });
 }
 
+export function useApplyCorsFix() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { connectionId: string; bucket: string }) => {
+      const res = await fetch(
+        `/api/connections/${vars.connectionId}/buckets/${encodeURIComponent(vars.bucket)}/apply-cors`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to apply CORS (${res.status})`);
+      }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.health.bucket(vars.connectionId, vars.bucket),
+      });
+    },
+  });
+}
+
 export interface CapabilityResolution {
   status: CapabilityStatus;
   reason: string | null;

@@ -2,6 +2,7 @@
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetBucketCorsCommand,
   GetBucketVersioningCommand,
   GetObjectTaggingCommand,
   HeadObjectCommand,
@@ -258,6 +259,38 @@ const listMultipartUploads: Probe = {
   },
 };
 
+const corsDirectUploads: Probe = {
+  key: "get-bucket-cors",
+  capability: "cors-direct-uploads",
+  scope: "bucket",
+  required: true,
+  async run({ client, bucket }): Promise<ProbeRunOutcome> {
+    const start = performance.now();
+    try {
+      const { CORSRules } = await client.send(
+        new GetBucketCorsCommand({ Bucket: bucket }),
+      );
+      const valid = (CORSRules ?? []).some(
+        (r) =>
+          r.AllowedMethods?.includes("PUT") &&
+          r.ExposeHeaders?.includes("ETag"),
+      );
+      if (valid) {
+        return { result: "granted", durationMs: elapsed(start) };
+      }
+      return { result: "denied", errorCode: "misconfigured", durationMs: elapsed(start) };
+    } catch (err) {
+      const e = err as { name?: string; Code?: string };
+      const name = e.name ?? e.Code ?? "";
+      if (name === "NoSuchCORSConfiguration") {
+        return { result: "denied", errorCode: "not_configured", durationMs: elapsed(start) };
+      }
+      const { result, errorCode } = classifyError(err);
+      return { result, errorCode, durationMs: elapsed(start) };
+    }
+  },
+};
+
 export const BUCKET_PROBES: Probe[] = [
   listObjects,
   headObject,
@@ -270,4 +303,5 @@ export const BUCKET_PROBES: Probe[] = [
   getBucketVersioning,
   putBucketVersioning,
   listMultipartUploads,
+  corsDirectUploads,
 ];

@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CapabilityReport, CapabilityStatus } from "@/lib/health/probe";
@@ -49,9 +50,18 @@ function statusLabel(status: CapabilityStatus): string {
 interface CapabilityRowProps {
   capability: CapabilityReport;
   defaultOpen?: boolean;
+  onFix?: () => void;
+  isFixing?: boolean;
+  fixError?: string;
 }
 
-export function CapabilityRow({ capability, defaultOpen = false }: CapabilityRowProps) {
+export function CapabilityRow({
+  capability,
+  defaultOpen = false,
+  onFix,
+  isFixing,
+  fixError,
+}: CapabilityRowProps) {
   const [open, setOpen] = useState(defaultOpen);
   const showDetails = capability.status !== "available";
 
@@ -83,6 +93,38 @@ export function CapabilityRow({ capability, defaultOpen = false }: CapabilityRow
 
       {open && (
         <div className="px-3 pb-3 pl-9 space-y-2 text-sm">
+          {capability.status === "unavailable" && capability.fixAction && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {capability.probes[0]?.errorCode === "not_configured"
+                  ? "No CORS rules are configured on this bucket."
+                  : "CORS rules exist but none allow PUT with ETag exposed."}
+              </p>
+              {onFix && (
+                <div className="space-y-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onFix}
+                    disabled={isFixing}
+                  >
+                    {isFixing ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        Applying…
+                      </>
+                    ) : (
+                      "Fix"
+                    )}
+                  </Button>
+                  {fixError && (
+                    <p className="text-xs text-destructive">{fixError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {showDetails && capability.requiredIamActions.length > 0 && (
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">

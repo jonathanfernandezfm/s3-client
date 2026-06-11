@@ -13,7 +13,8 @@ export type CapabilityKey =
   | "object-tagging"
   | "list-versions"
   | "manage-versioning"
-  | "view-multipart";
+  | "view-multipart"
+  | "cors-direct-uploads";
 
 export type ProbeScope = "connection" | "bucket";
 
@@ -73,6 +74,7 @@ export interface CapabilityReport {
   }>;
   requiredIamActions: string[];
   affects: string[];
+  fixAction?: string;
 }
 
 export interface HealthReport {

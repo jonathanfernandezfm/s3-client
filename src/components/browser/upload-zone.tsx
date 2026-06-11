@@ -4,14 +4,50 @@ import { useCallback, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queries/keys";
 import { Button } from "@/components/ui/button";
-import { useNotificationStore } from "@/lib/stores/notification-store";
-import { Upload } from "lucide-react";
+import { enqueueUploads } from "@/lib/uploads/controller";
+import {
+  filesFromDataTransfer,
+  type FileWithPath,
+} from "@/lib/uploads/folder-walk";
+import { Upload, FolderUp } from "lucide-react";
+import { notify } from "@/lib/stores/notification-store";
 
 interface UploadZoneProps {
   connectionId: string;
   bucket: string;
   currentPath: string;
   disabled?: boolean;
+}
+
+function useEnqueueFiles(
+  connectionId: string,
+  bucket: string,
+  currentPath: string
+) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (files: FileWithPath[]) => {
+      if (files.length === 0) {
+        notify("info", "Nothing to upload", "No files were found in the selection.");
+        return;
+      }
+      enqueueUploads(
+        files.map(({ file, relativePath }) => ({
+          file,
+          connectionId,
+          bucket,
+          key: currentPath + relativePath,
+          onComplete: () =>
+            queryClient.invalidateQueries({
+              // Folder uploads can create new prefixes, so invalidate all
+              // object listings for this bucket.
+              queryKey: [...queryKeys.objects.all, connectionId, bucket],
+            }),
+        }))
+      );
+    },
+    [connectionId, bucket, currentPath, queryClient]
+  );
 }
 
 export function UploadZone({
@@ -21,57 +57,7 @@ export function UploadZone({
   disabled = false,
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const { addNotification, updateNotification } = useNotificationStore();
-  const queryClient = useQueryClient();
-
-  const uploadFile = useCallback(
-    async (file: File) => {
-      const key = currentPath + file.name;
-
-      const notifId = addNotification({
-        type: "upload",
-        title: "Uploading...",
-        description: file.name,
-        status: "in-progress",
-      });
-
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("bucket", bucket);
-        formData.append("key", key);
-        formData.append("connectionId", connectionId);
-
-        const response = await fetch("/api/objects/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Upload failed");
-        }
-
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.objects.list(connectionId, bucket, currentPath),
-        });
-
-        updateNotification(notifId, {
-          status: "completed",
-          title: "Upload complete",
-          description: `Successfully uploaded ${file.name}`,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        updateNotification(notifId, {
-          status: "error",
-          title: "Upload failed",
-          error: message,
-        });
-      }
-    },
-    [connectionId, bucket, currentPath, addNotification, updateNotification, queryClient]
-  );
+  const enqueueFiles = useEnqueueFiles(connectionId, bucket, currentPath);
 
   const isExternalFileDrag = useCallback((e: DragEvent): boolean => {
     if (!e.dataTransfer) return false;
@@ -85,26 +71,33 @@ export function UploadZone({
       e.stopPropagation();
       setIsDragging(false);
 
-      if (!isExternalFileDrag(e)) return;
+      if (!isExternalFileDrag(e) || !e.dataTransfer) return;
 
-      const files = Array.from(e.dataTransfer?.files || []);
-      files.forEach(uploadFile);
+      // filesFromDataTransfer captures entry handles synchronously (required —
+      // they expire with the event), then traverses folders asynchronously.
+      void filesFromDataTransfer(e.dataTransfer).then(enqueueFiles);
     },
-    [uploadFile, isExternalFileDrag]
+    [enqueueFiles, isExternalFileDrag]
   );
 
-  const handleDragOver = useCallback((e: DragEvent) => {
-    if (!isExternalFileDrag(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }, [isExternalFileDrag]);
+  const handleDragOver = useCallback(
+    (e: DragEvent) => {
+      if (!isExternalFileDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [isExternalFileDrag]
+  );
 
-  const handleDragEnter = useCallback((e: DragEvent) => {
-    if (!isExternalFileDrag(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, [isExternalFileDrag]);
+  const handleDragEnter = useCallback(
+    (e: DragEvent) => {
+      if (!isExternalFileDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+    },
+    [isExternalFileDrag]
+  );
 
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -137,9 +130,11 @@ export function UploadZone({
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-8">
           <div className="w-full h-full border border-dashed border-muted-foreground/50 rounded-lg flex flex-col items-center justify-center bg-white dark:bg-zinc-950">
             <Upload className="h-16 w-16 mb-4 text-primary" />
-            <p className="text-xl font-medium text-primary">Drop files to upload</p>
+            <p className="text-xl font-medium text-primary">
+              Drop files or folders to upload
+            </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Files will be uploaded to the current folder
+              Uploads go to the current folder
             </p>
           </div>
         </div>
@@ -161,70 +156,22 @@ export function UploadButton({
   currentPath,
   disabled = false,
 }: UploadButtonProps) {
-  const { addNotification, updateNotification } = useNotificationStore();
-  const queryClient = useQueryClient();
-
-  const uploadFile = useCallback(
-    async (file: File) => {
-      const key = currentPath + file.name;
-
-      const notifId = addNotification({
-        type: "upload",
-        title: "Uploading...",
-        description: file.name,
-        status: "in-progress",
-      });
-
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("bucket", bucket);
-        formData.append("key", key);
-        formData.append("connectionId", connectionId);
-
-        const response = await fetch("/api/objects/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Upload failed");
-        }
-
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.objects.list(connectionId, bucket, currentPath),
-        });
-
-        updateNotification(notifId, {
-          status: "completed",
-          title: "Upload complete",
-          description: `Successfully uploaded ${file.name}`,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        updateNotification(notifId, {
-          status: "error",
-          title: "Upload failed",
-          error: message,
-        });
-      }
-    },
-    [connectionId, bucket, currentPath, addNotification, updateNotification, queryClient]
-  );
+  const enqueueFiles = useEnqueueFiles(connectionId, bucket, currentPath);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (disabled) return;
-      const files = Array.from(e.target.files || []);
-      files.forEach(uploadFile);
+      const files: FileWithPath[] = Array.from(e.target.files || []).map(
+        (file) => ({ file, relativePath: file.name })
+      );
+      enqueueFiles(files);
       e.target.value = "";
     },
-    [uploadFile, disabled]
+    [enqueueFiles, disabled]
   );
 
   return (
-    <label>
+    <label onClick={disabled ? (e) => e.preventDefault() : undefined}>
       <input
         type="file"
         multiple
@@ -236,6 +183,52 @@ export function UploadButton({
         <span>
           <Upload className="h-4 w-4" />
           Upload file
+        </span>
+      </Button>
+    </label>
+  );
+}
+
+export function UploadFolderButton({
+  connectionId,
+  bucket,
+  currentPath,
+  disabled = false,
+}: UploadButtonProps) {
+  const enqueueFiles = useEnqueueFiles(connectionId, bucket, currentPath);
+
+  const handleFolderSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (disabled) return;
+      const files: FileWithPath[] = Array.from(e.target.files || []).map(
+        (file) => ({
+          // webkitRelativePath is "pickedFolder/sub/file.txt" — keep the
+          // folder name so the structure lands under the current path.
+          file,
+          relativePath: file.webkitRelativePath || file.name,
+        })
+      );
+      enqueueFiles(files);
+      e.target.value = "";
+    },
+    [enqueueFiles, disabled]
+  );
+
+  return (
+    <label onClick={disabled ? (e) => e.preventDefault() : undefined}>
+      <input
+        type="file"
+        multiple
+        // Non-standard but universally supported attribute for folder pickers.
+        {...{ webkitdirectory: "" }}
+        onChange={handleFolderSelect}
+        className="hidden"
+        disabled={disabled}
+      />
+      <Button asChild variant="outline" disabled={disabled}>
+        <span>
+          <FolderUp className="h-4 w-4" />
+          Upload folder
         </span>
       </Button>
     </label>

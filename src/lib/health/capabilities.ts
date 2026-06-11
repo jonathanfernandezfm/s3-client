@@ -7,6 +7,7 @@ export interface CapabilityDefinition {
   scope: "connection" | "bucket";
   requiredIamActions: string[];
   affects: string[];
+  fixAction?: string;
 }
 
 export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
@@ -100,6 +101,16 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     affects: [
       "The Incomplete Uploads card on the bucket Overview will be disabled",
     ],
+  },
+  "cors-direct-uploads": {
+    key: "cors-direct-uploads",
+    label: "Direct uploads (CORS)",
+    scope: "bucket",
+    requiredIamActions: ["s3:GetBucketCors"],
+    affects: [
+      "File uploads will fail with a CORS error in the browser",
+    ],
+    fixAction: "apply-cors",
   },
 };
 
