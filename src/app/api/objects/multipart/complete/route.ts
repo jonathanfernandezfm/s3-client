@@ -71,10 +71,14 @@ export const POST = withAuth(async (req, { user }) => {
           Key: key,
           UploadId: uploadId,
           MultipartUpload: {
-            Parts: parts!.map((p) => ({
-              PartNumber: p.partNumber,
-              ETag: p.etag,
-            })),
+            // S3 requires ascending part order; don't rely on the caller.
+            Parts: parts!
+              .slice()
+              .sort((a, b) => a.partNumber - b.partNumber)
+              .map((p) => ({
+                PartNumber: p.partNumber,
+                ETag: p.etag,
+              })),
           },
         })
       );
