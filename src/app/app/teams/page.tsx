@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useTier } from "@/hooks/use-tier";
 import { LockedPageOverlay } from "@/components/billing/locked-page-overlay";
+import type { Role } from "@/lib/roles";
 
 function TeamsContent() {
   const { can, isLoading } = useTier();
@@ -76,7 +77,7 @@ function TeamsContent() {
 
   const handleAddMember = async (data: {
     email: string;
-    role: "ADMIN" | "VIEWER";
+    role: Role;
   }) => {
     try {
       await addMember.mutateAsync(data);
@@ -96,7 +97,7 @@ function TeamsContent() {
     }
   };
 
-  const handleUpdateRole = async (memberId: string, role: "ADMIN" | "VIEWER") => {
+  const handleUpdateRole = async (memberId: string, role: Role) => {
     try {
       await updateRole.mutateAsync({ memberId, role });
       addNotification({

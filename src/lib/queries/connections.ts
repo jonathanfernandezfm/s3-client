@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Role } from "@/lib/roles";
 
 export interface ConnectionResponse {
   id: string;
@@ -12,7 +13,7 @@ export interface ConnectionResponse {
   forcePathStyle: boolean;
   workspaceId: string;
   workspaceType: "PERSONAL" | "TEAM";
-  role: "ADMIN" | "VIEWER";
+  role: Role;
   createdAt: string;
   updatedAt?: string;
 }

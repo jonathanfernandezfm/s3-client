@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { Role } from "@/lib/roles";
 
 export interface WorkspaceSummary {
   id: string;
   type: "PERSONAL" | "TEAM";
   name: string;
-  role: "ADMIN" | "VIEWER";
+  role: Role;
 }
 
 export const workspaceKeys = {

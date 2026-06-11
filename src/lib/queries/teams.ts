@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Role } from "@/lib/roles";
 
 export interface TeamSummary {
   id: string;
   name: string;
   slug: string;
-  role: "ADMIN" | "VIEWER";
+  role: Role;
   workspaceId: string;
   memberCount: number;
   createdAt: string;
@@ -15,7 +16,7 @@ export interface TeamSummary {
 export interface TeamMember {
   id: string;
   userId: string;
-  role: "ADMIN" | "VIEWER";
+  role: Role;
   email: string;
   firstName: string | null;
   lastName: string | null;
@@ -26,7 +27,7 @@ export interface TeamDetail {
   id: string;
   name: string;
   slug: string;
-  role: "ADMIN" | "VIEWER";
+  role: Role;
   workspaceId: string;
   members: TeamMember[];
 }
@@ -72,7 +73,7 @@ async function createTeam(data: { name: string; slug?: string }): Promise<TeamSu
 
 async function addTeamMember(
   teamId: string,
-  data: { email: string; role: "ADMIN" | "VIEWER" }
+  data: { email: string; role: Role }
 ): Promise<TeamMember> {
   const response = await fetch(`/api/teams/${teamId}/members`, {
     method: "POST",
@@ -91,8 +92,8 @@ async function addTeamMember(
 async function updateTeamMemberRole(
   teamId: string,
   memberId: string,
-  role: "ADMIN" | "VIEWER"
-): Promise<{ id: string; userId: string; role: "ADMIN" | "VIEWER" }> {
+  role: Role
+): Promise<{ id: string; userId: string; role: Role }> {
   const response = await fetch(`/api/teams/${teamId}/members/${memberId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -151,7 +152,7 @@ export function useAddTeamMember(teamId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { email: string; role: "ADMIN" | "VIEWER" }) =>
+    mutationFn: (data: { email: string; role: Role }) =>
       addTeamMember(teamId!, data),
     onSuccess: () => {
       if (teamId) {
@@ -166,7 +167,7 @@ export function useUpdateTeamMemberRole(teamId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: "ADMIN" | "VIEWER" }) =>
+    mutationFn: ({ memberId, role }: { memberId: string; role: Role }) =>
       updateTeamMemberRole(teamId!, memberId, role),
     onSuccess: () => {
       if (teamId) {

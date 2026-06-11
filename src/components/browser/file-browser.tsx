@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Star, History, MessageSquare, Activity } from "lucide-react";
+import { canManageFiles } from "@/lib/roles";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { useNotesForKey, useNoteCounts } from "@/lib/queries/notes";
 import { useShareLinkCounts } from "@/lib/queries/share-links";
@@ -86,7 +87,7 @@ export function FileBrowser({
   const paneState = getPaneState(paneId);
   const selectedItems = paneState.selectedItems;
   const connection = connections.find((item) => item.id === connectionId);
-  const canWrite = connection ? connection.role === "ADMIN" : true;
+  const canWrite = connection ? canManageFiles(connection.role) : true;
   const versioning = useBucketVersioning(connectionId, bucket);
 
   const currentPath = path.length > 0 ? path.join("/") + "/" : "";

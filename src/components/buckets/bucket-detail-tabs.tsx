@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, BarChart3, Database, Lock, RefreshCw, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/lib/queries/connections";
+import { canManageFiles } from "@/lib/roles";
 import { ComingSoonTab } from "./coming-soon-tab";
 import { MultipartUploadsTab } from "./multipart-uploads-tab";
 import { OverviewTab } from "./overview-tab";
@@ -36,7 +37,7 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
 
   const { data: connections = [] } = useConnections();
   const connection = connections.find((c) => c.id === connectionId);
-  const canAbort = connection?.role === "ADMIN";
+  const canAbort = canManageFiles(connection?.role ?? null);
 
   const setTab = (key: TabKey) => {
     const params = new URLSearchParams(searchParams.toString());

@@ -17,8 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, MoreVertical, Plus, Shield, User } from "lucide-react";
+import { Loader2, MoreVertical, Pencil, Plus, Shield, User } from "lucide-react";
 import type { TeamDetail } from "@/lib/queries/teams";
+import type { Role } from "@/lib/roles";
 
 interface TeamMembersCardProps {
   team: TeamDetail;
@@ -26,8 +27,8 @@ interface TeamMembersCardProps {
   isAdding: boolean;
   isUpdating: boolean;
   isRemoving: boolean;
-  onAddMember: (data: { email: string; role: "ADMIN" | "VIEWER" }) => Promise<void>;
-  onUpdateRole: (memberId: string, role: "ADMIN" | "VIEWER") => Promise<void>;
+  onAddMember: (data: { email: string; role: Role }) => Promise<void>;
+  onUpdateRole: (memberId: string, role: Role) => Promise<void>;
   onRemoveMember: (memberId: string) => Promise<void>;
 }
 
@@ -42,7 +43,7 @@ export function TeamMembersCard({
   onRemoveMember,
 }: TeamMembersCardProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "VIEWER">("VIEWER");
+  const [role, setRole] = useState<Role>("VIEWER");
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,10 +81,11 @@ export function TeamMembersCard({
               <select
                 id="member-role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as "ADMIN" | "VIEWER")}
+                onChange={(e) => setRole(e.target.value as Role)}
                 className="h-9 w-full"
               >
                 <option value="VIEWER">Viewer</option>
+                <option value="EDITOR">Editor</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
@@ -99,7 +101,14 @@ export function TeamMembersCard({
         <div className="space-y-2">
           {team.members.map((member) => {
             const name = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email;
-            const isAdmin = member.role === "ADMIN";
+            const roleIcon =
+              member.role === "ADMIN" ? (
+                <Shield className="h-3 w-3" />
+              ) : member.role === "EDITOR" ? (
+                <Pencil className="h-3 w-3" />
+              ) : (
+                <User className="h-3 w-3" />
+              );
 
             return (
               <div key={member.id} className="flex items-center justify-between rounded-lg border p-3">
@@ -110,7 +119,7 @@ export function TeamMembersCard({
 
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-muted-foreground">
-                    {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                    {roleIcon}
                     {member.role}
                   </span>
 
@@ -127,6 +136,12 @@ export function TeamMembersCard({
                           disabled={member.role === "ADMIN" || isUpdating}
                         >
                           Make Admin
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onUpdateRole(member.id, "EDITOR")}
+                          disabled={member.role === "EDITOR" || isUpdating}
+                        >
+                          Make Editor
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onUpdateRole(member.id, "VIEWER")}
