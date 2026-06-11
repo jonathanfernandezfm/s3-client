@@ -5,6 +5,7 @@ import { RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CapabilityRow } from "./capability-row";
+import { useApplyCorsFix } from "@/lib/queries/health";
 import type { HealthReport as HealthReportType } from "@/lib/health/probe";
 
 interface HealthReportViewProps {
@@ -31,6 +32,8 @@ export function HealthReportView({
   onRefresh,
   isRefreshing,
 }: HealthReportViewProps) {
+  const applyFix = useApplyCorsFix();
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -85,7 +88,25 @@ export function HealthReportView({
 
       <Card className="overflow-hidden">
         {report.capabilities.map((cap) => (
-          <CapabilityRow key={cap.key} capability={cap} />
+          <CapabilityRow
+            key={cap.key}
+            capability={cap}
+            onFix={
+              cap.fixAction
+                ? () =>
+                    applyFix.mutate({
+                      connectionId: report.connectionId,
+                      bucket: report.bucket!,
+                    })
+                : undefined
+            }
+            isFixing={applyFix.isPending}
+            fixError={
+              applyFix.isError && applyFix.variables?.bucket === report.bucket
+                ? (applyFix.error as Error).message
+                : undefined
+            }
+          />
         ))}
       </Card>
     </div>
