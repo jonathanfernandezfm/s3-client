@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useUploadStore, type UploadItem } from "@/lib/stores/upload-store";
 import {
   pauseUpload,
@@ -225,6 +226,14 @@ export function UploadManager() {
               >
                 {statusLabel(item)}
               </p>
+              {item.status === "error" && item.error?.includes("CORS") && (
+                <Link
+                  href={`/app/buckets/${item.connectionId}/${encodeURIComponent(item.bucket)}?tab=permissions`}
+                  className="mt-0.5 text-xs text-primary underline-offset-2 hover:underline"
+                >
+                  Check permissions →
+                </Link>
+              )}
             </div>
           );
         })}
