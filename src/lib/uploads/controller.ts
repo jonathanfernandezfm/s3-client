@@ -69,6 +69,12 @@ export function enqueueUploads(inputs: EnqueueInput[]): void {
       onProgress: (loaded) =>
         useUploadStore.getState().updateItem(id, { loaded }),
       onStatus: (status, error) => {
+        const current = useUploadStore
+          .getState()
+          .items.find((i) => i.id === id);
+        // A finished item never transitions again (guards against late
+        // async callbacks, e.g. a stale "paused" after "canceled").
+        if (!current || FINISHED_STATUSES.includes(current.status)) return;
         useUploadStore.getState().updateItem(id, { status, error });
         if (status === "completed") {
           completionCallbacks.get(id)?.();
@@ -122,7 +128,7 @@ export function resumeUpload(id: string): void {
 
 export function cancelUpload(id: string): void {
   const item = useUploadStore.getState().items.find((i) => i.id === id);
-  if (!item) return;
+  if (!item || FINISHED_STATUSES.includes(item.status)) return;
   if (item.status === "queued") {
     // Never started — nothing remote to abort.
     useUploadStore.getState().updateItem(id, { status: "canceled" });

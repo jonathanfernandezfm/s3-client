@@ -166,4 +166,20 @@ describe("upload controller", () => {
     const keys = useUploadStore.getState().items.map((i) => i.key);
     expect(keys).toEqual(["f2"]);
   });
+
+  it("cancel on a finished item is a no-op", () => {
+    enqueue(["f1"]);
+    const id = useUploadStore.getState().items[0].id;
+    fakes.get("f1")!.callbacks.onStatus("completed");
+    cancelUpload(id);
+    expect(statuses().f1).toBe("completed");
+    expect(fakes.get("f1")!.cancelCalls).toBe(0);
+  });
+
+  it("ignores status callbacks after an item reached a terminal state", () => {
+    enqueue(["f1"]);
+    fakes.get("f1")!.callbacks.onStatus("canceled");
+    fakes.get("f1")!.callbacks.onStatus("paused"); // stale, must be ignored
+    expect(statuses().f1).toBe("canceled");
+  });
 });
