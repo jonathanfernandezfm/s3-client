@@ -7,6 +7,7 @@ vi.mock("@/lib/db/prisma", () => ({
       delete: vi.fn(),
       deleteMany: vi.fn(),
       update: vi.fn(),
+      findMany: vi.fn(),
     },
     $transaction: vi.fn(),
   },
@@ -23,6 +24,7 @@ import {
   indexDelete,
   indexRename,
   indexUpdateTags,
+  indexTagsForKeys,
 } from "./index-ops";
 
 beforeEach(() => {
@@ -125,5 +127,77 @@ describe("indexUpdateTags", () => {
       where: { connectionId_bucket_key: { connectionId: "c1", bucket: "b1", key: "x.png" } },
       data: { tags: ["invoice", "march"] },
     });
+  });
+});
+
+describe("indexTagsForKeys", () => {
+  test("returns key → tag values map, skipping untagged rows", async () => {
+    vi.mocked(prisma.objectIndex.findMany).mockResolvedValue([
+      { key: "a.txt", tags: ["prod", "archive"] },
+      { key: "b.txt", tags: [] },
+    ] as never);
+
+    const result = await indexTagsForKeys({
+      connectionId: "c1",
+      bucket: "b1",
+      keys: ["a.txt", "b.txt", "c.txt"],
+    });
+
+    expect(result).toEqual({ "a.txt": ["prod", "archive"] });
+    const args = vi.mocked(prisma.objectIndex.findMany).mock.calls[0][0];
+    expect(args?.where).toEqual({
+      connectionId: "c1",
+      bucket: "b1",
+      key: { in: ["a.txt", "b.txt", "c.txt"] },
+    });
+  });
+
+  test("filters out non-string entries in the jsonb array", async () => {
+    vi.mocked(prisma.objectIndex.findMany).mockResolvedValue([
+      { key: "a.txt", tags: ["prod", 42, null] },
+      { key: "b.txt", tags: "not-an-array" },
+    ] as never);
+
+    const result = await indexTagsForKeys({
+      connectionId: "c1",
+      bucket: "b1",
+      keys: ["a.txt", "b.txt"],
+    });
+
+    expect(result).toEqual({ "a.txt": ["prod"] });
+  });
+
+  test("returns empty map when flag disabled, without querying", async () => {
+    vi.mocked(isSearchIndexEnabled).mockReturnValue(false);
+    const result = await indexTagsForKeys({
+      connectionId: "c1",
+      bucket: "b1",
+      keys: ["a.txt"],
+    });
+    expect(result).toEqual({});
+    expect(prisma.objectIndex.findMany).not.toHaveBeenCalled();
+  });
+
+  test("returns empty map for empty key list, without querying", async () => {
+    const result = await indexTagsForKeys({
+      connectionId: "c1",
+      bucket: "b1",
+      keys: [],
+    });
+    expect(result).toEqual({});
+    expect(prisma.objectIndex.findMany).not.toHaveBeenCalled();
+  });
+
+  test("swallows errors and returns empty map", async () => {
+    vi.mocked(prisma.objectIndex.findMany).mockRejectedValueOnce(new Error("db down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await indexTagsForKeys({
+      connectionId: "c1",
+      bucket: "b1",
+      keys: ["a.txt"],
+    });
+    expect(result).toEqual({});
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
