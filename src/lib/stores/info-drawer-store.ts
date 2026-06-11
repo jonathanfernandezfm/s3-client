@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ActivityAction } from "@/generated/prisma/client";
 
-export type InfoDrawerTab = "activity" | "notes" | "versions";
+export type InfoDrawerTab = "activity" | "notes" | "versions" | "properties";
 
 export type InfoDrawerScope = {
   connectionId: string;

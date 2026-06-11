@@ -1,12 +1,37 @@
 "use client";
 
 import { useEffect } from "react";
-import { X, Activity, MessageSquare, History } from "lucide-react";
+import {
+  X,
+  Activity,
+  MessageSquare,
+  History,
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
+import {
+  useInfoDrawerStore,
+  type InfoDrawerTab,
+} from "@/lib/stores/info-drawer-store";
 import { ActivityTab } from "./activity-tab";
 import { NotesTab } from "./notes-tab";
 import { VersionsTab } from "./versions-tab";
+import { PropertiesTab } from "./properties-tab";
+
+const TAB_META: Record<InfoDrawerTab, { label: string; icon: LucideIcon }> = {
+  activity: { label: "Activity", icon: Activity },
+  notes: { label: "Notes", icon: MessageSquare },
+  versions: { label: "Versions", icon: History },
+  properties: { label: "Properties", icon: SlidersHorizontal },
+};
+
+const TAB_ORDER: InfoDrawerTab[] = [
+  "activity",
+  "notes",
+  "versions",
+  "properties",
+];
 
 export function InfoDrawer() {
   const { isOpen, scope, activeTab, setActiveTab, close } = useInfoDrawerStore();
@@ -28,6 +53,8 @@ export function InfoDrawer() {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, close]);
+
+  const ActiveIcon = TAB_META[activeTab].icon;
 
   return (
     <>
@@ -61,16 +88,8 @@ export function InfoDrawer() {
         <div className="flex items-start justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              {activeTab === "activity" ? (
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              ) : activeTab === "notes" ? (
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <History className="h-4 w-4 text-muted-foreground" />
-              )}
-              <h2 className="text-sm font-semibold">
-                {activeTab === "activity" ? "Activity" : activeTab === "notes" ? "Notes" : "Versions"}
-              </h2>
+              <ActiveIcon className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">{TAB_META[activeTab].label}</h2>
             </div>
             {scopeLabel && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
@@ -93,39 +112,20 @@ export function InfoDrawer() {
 
         {/* Tab strip */}
         <div className="flex border-b border-border shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab("activity")}
-            className={`flex-1 text-xs font-medium py-2 border-b-2 transition-colors ${
-              activeTab === "activity"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Activity
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("notes")}
-            className={`flex-1 text-xs font-medium py-2 border-b-2 transition-colors ${
-              activeTab === "notes"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Notes
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("versions")}
-            className={`flex-1 text-xs font-medium py-2 border-b-2 transition-colors ${
-              activeTab === "versions"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Versions
-          </button>
+          {TAB_ORDER.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 text-xs font-medium py-2 border-b-2 transition-colors ${
+                activeTab === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {TAB_META[tab].label}
+            </button>
+          ))}
         </div>
 
         {/* Body */}
@@ -139,8 +139,10 @@ export function InfoDrawer() {
           <ActivityTab />
         ) : activeTab === "notes" ? (
           <NotesTab />
-        ) : (
+        ) : activeTab === "versions" ? (
           <VersionsTab />
+        ) : (
+          <PropertiesTab />
         )}
       </div>
     </>
