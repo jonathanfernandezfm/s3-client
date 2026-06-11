@@ -1,6 +1,10 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { queryKeys } from "./keys";
 import type { S3Object } from "@/types";
 import { useInvalidateActivity } from "./activity";
@@ -36,12 +40,13 @@ interface CopyMoveParams {
 async function fetchObjects(
   connectionId: string,
   bucket: string,
-  prefix: string
+  prefix: string,
+  continuationToken?: string
 ): Promise<ListObjectsResponse> {
   const response = await fetch("/api/objects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ connectionId, bucket, prefix }),
+    body: JSON.stringify({ connectionId, bucket, prefix, continuationToken }),
   });
 
   if (!response.ok) {
@@ -95,11 +100,28 @@ export function useObjects(
   bucket: string,
   prefix: string = ""
 ) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: queryKeys.objects.list(connectionId, bucket, prefix),
-    queryFn: () => fetchObjects(connectionId, bucket, prefix),
+    queryFn: ({ pageParam }) =>
+      fetchObjects(connectionId, bucket, prefix, pageParam),
+    getNextPageParam: (lastPage) =>
+      lastPage.isTruncated ? lastPage.nextContinuationToken : undefined,
+    initialPageParam: undefined as string | undefined,
     enabled: !!connectionId && !!bucket,
   });
+
+  const objects = query.data?.pages.flatMap((p) => p.objects) ?? [];
+
+  return {
+    objects,
+    hasMore: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    refetch: query.refetch,
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+  };
 }
 
 export function useDeleteObjects(connectionId: string, bucket: string) {

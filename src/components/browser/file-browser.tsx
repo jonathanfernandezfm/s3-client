@@ -95,11 +95,14 @@ export function FileBrowser({
     });
   }, [isInfoOpen, connectionId, bucket, currentPath, setInfoScope]);
 
-  const { data, isPending, refetch } = useObjects(
-    connectionId,
-    bucket,
-    currentPath
-  );
+  const {
+    objects,
+    hasMore,
+    fetchNextPage,
+    isFetchingNextPage,
+    isPending,
+    refetch,
+  } = useObjects(connectionId, bucket, currentPath);
   const deleteObjects = useDeleteObjects(connectionId, bucket);
   const copyObjects = useCopyObjects();
   const moveObjects = useMoveObjects();
@@ -111,7 +114,7 @@ export function FileBrowser({
   });
   const noteButtonCount = folderNotesQuery.data?.length ?? 0;
 
-  const folderKeys = (data?.objects ?? [])
+  const folderKeys = objects
     .filter((o) => o.isFolder)
     .map((o) => o.key);
   const folderNoteCountsQuery = useNoteCounts({
@@ -121,7 +124,7 @@ export function FileBrowser({
   });
   const folderNoteCounts = folderNoteCountsQuery.data ?? {};
 
-  const fileKeys = (data?.objects ?? [])
+  const fileKeys = objects
     .filter((o) => !o.isFolder)
     .map((o) => o.key);
   const fileShareCountsQuery = useShareLinkCounts({
@@ -550,7 +553,7 @@ export function FileBrowser({
         >
           {paneState.viewMode === "grid" ? (
             <FileGallery
-              objects={data?.objects || []}
+              objects={objects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
@@ -571,7 +574,7 @@ export function FileBrowser({
             />
           ) : (
             <FileList
-              objects={data?.objects || []}
+              objects={objects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
@@ -590,6 +593,29 @@ export function FileBrowser({
               folderNoteCounts={folderNoteCounts}
               fileShareCounts={fileShareCounts}
             />
+          )}
+          {hasMore && !isPending && (
+            <div className="flex items-center justify-center gap-2 py-3 border-t">
+              <span className="text-xs text-muted-foreground">
+                Showing {objects.length} items
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load more"
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -620,7 +646,7 @@ export function FileBrowser({
         paneId={paneId}
         connectionId={connectionId}
         bucket={bucket}
-        objects={data?.objects || []}
+        objects={objects}
         canWrite={canWrite}
       />
 

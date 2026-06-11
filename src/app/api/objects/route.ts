@@ -11,8 +11,13 @@ export const POST = withAuth(async (req, { user }) => {
       connectionId,
       bucket,
       prefix = "",
-    }: { connectionId: string; bucket: string; prefix?: string } =
-      await req.json();
+      continuationToken,
+    }: {
+      connectionId: string;
+      bucket: string;
+      prefix?: string;
+      continuationToken?: string;
+    } = await req.json();
 
     if (!connectionId || !bucket) {
       return NextResponse.json(
@@ -35,6 +40,7 @@ export const POST = withAuth(async (req, { user }) => {
       Prefix: prefix,
       Delimiter: "/",
       MaxKeys: 1000,
+      ContinuationToken: continuationToken,
     });
 
     const response = await client.send(command);

@@ -127,12 +127,12 @@ export function usePaletteItems(): PaletteItems {
       };
 
       const cached = queryClient.getQueryData<{
-        objects: S3Object[];
-        isTruncated: boolean;
+        pages: { objects: S3Object[]; isTruncated: boolean }[];
       }>(queryKeys.objects.list(activeTab.connectionId, activeTab.bucket, currentPath));
 
-      if (cached) {
-        folders = cached.objects
+      if (cached?.pages?.length) {
+        folders = cached.pages
+          .flatMap((page) => page.objects)
           .filter((obj) => obj.isFolder)
           .map((obj) => ({
             connectionId: activeTab.connectionId!,
@@ -141,7 +141,8 @@ export function usePaletteItems(): PaletteItems {
             label: obj.key.slice(currentPath.length).replace(/\/$/, ""),
             parentPath: currentPath,
           }));
-        isFoldersTruncated = cached.isTruncated;
+        isFoldersTruncated =
+          cached.pages[cached.pages.length - 1].isTruncated;
       }
     }
 
