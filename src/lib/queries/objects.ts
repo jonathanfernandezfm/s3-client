@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { queryKeys } from "./keys";
-import type { S3Object } from "@/types";
+import type { ObjectProperties, S3Object } from "@/types";
 import { useInvalidateActivity } from "./activity";
 import { useInvalidateNotes } from "./notes";
 
@@ -208,6 +208,78 @@ export function useMoveObjects() {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
       invalidateActivity();
       invalidateNotes();
+    },
+  });
+}
+
+async function fetchObjectHead(
+  connectionId: string,
+  bucket: string,
+  key: string
+): Promise<ObjectProperties> {
+  const response = await fetch("/api/objects/head", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ connectionId, bucket, key }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to fetch object properties");
+  }
+
+  return response.json();
+}
+
+export function useObjectHead(
+  connectionId: string,
+  bucket: string,
+  key: string
+) {
+  return useQuery({
+    queryKey: queryKeys.objects.detail(connectionId, bucket, key),
+    queryFn: () => fetchObjectHead(connectionId, bucket, key),
+    enabled: !!connectionId && !!bucket && !!key,
+  });
+}
+
+export interface UpdateObjectMetadataParams {
+  connectionId: string;
+  bucket: string;
+  key: string;
+  contentType: string;
+  cacheControl: string;
+  metadata: Record<string, string>;
+  storageClass: string;
+}
+
+async function updateObjectMetadata(
+  params: UpdateObjectMetadataParams
+): Promise<{ success: boolean }> {
+  const response = await fetch("/api/objects/metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to update object metadata");
+  }
+
+  return response.json();
+}
+
+export function useUpdateObjectMetadata() {
+  const queryClient = useQueryClient();
+  const invalidateActivity = useInvalidateActivity();
+
+  return useMutation({
+    mutationFn: updateObjectMetadata,
+    onSuccess: () => {
+      // objects.all covers both the list and detail keys.
+      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+      invalidateActivity();
     },
   });
 }

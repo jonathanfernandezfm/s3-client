@@ -2,12 +2,29 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2 } from "lucide-react";
+import {
+  Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2,
+  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
 import type { S3Object } from "@/types";
 import { ShareDialog } from "@/components/shares/share-dialog";
-import { FeatureGate } from "@/components/shared/feature-gate";
+import { useBucketVersioning } from "@/lib/queries/buckets";
+import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
+import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
+import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
+import { findBookmark } from "@/lib/bookmarks-helpers";
+import { useTier } from "@/hooks/use-tier";
+import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
+import { CapabilityGate } from "@/components/health/capability-gate";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -26,6 +43,8 @@ interface FileTileProps {
   isSelected: boolean;
   onSelect: (mods: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void;
   onPreview: () => void;
+  onDelete?: () => void;
+  onDownload?: () => void;
   onNavigate?: (path: string) => void;
   thumbnailUrl?: string;
   paneId: string;
@@ -45,9 +64,12 @@ export function FileTile({
   connectionId,
   bucket,
   currentPath,
+  canWrite = true,
   isSelected,
   onSelect,
   onPreview,
+  onDelete,
+  onDownload,
   onNavigate,
   thumbnailUrl,
   paneId,
@@ -64,6 +86,21 @@ export function FileTile({
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const { can } = useTier();
+  const openUpgradeModal = useUpgradeModalStore((s) => s.open);
+  const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
+  const createBookmark = useCreateBookmark();
+  const deleteBookmark = useDeleteBookmark();
+  const versioning = useBucketVersioning(connectionId, bucket);
+  const hasVersioning = versioning.data?.status === "Enabled" || versioning.data?.status === "Suspended";
+  const openVersionDialog = useVersionHistoryDialogStore((s) => s.open);
+  const setInfoScope = useInfoDrawerStore((s) => s.setScope);
+  const openInfoDrawer = useInfoDrawerStore((s) => s.open);
+
+  const handleOpenProperties = () => {
+    setInfoScope({ connectionId, bucket, prefix: currentPath || undefined, objectKey: object.key });
+    openInfoDrawer("properties");
+  };
 
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, fileName } =
     useFileItemBehavior({
@@ -130,6 +167,43 @@ export function FileTile({
             <Folder className="h-12 w-12 text-amber-400" />
           </div>
         </Link>
+        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {(() => {
+            const existing = findBookmark(prefixBookmarks, connectionId, bucket, object.key);
+            const pinned = !!existing;
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 bg-background/80 backdrop-blur-sm border shadow-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    if (pinned && existing) deleteBookmark.mutate(existing.id);
+                    else createBookmark.mutate({ connectionId, bucket, prefix: object.key });
+                  }}>
+                    <Star className="h-4 w-4" />
+                    {pinned ? "Unpin folder" : "Pin folder"}
+                  </DropdownMenuItem>
+                  {canWrite && (
+                    <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects" disableOnly>
+                      <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </CapabilityGate>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })()}
+        </div>
         <div className="mt-2 flex items-center gap-1 min-w-0">
           <span className="text-sm truncate" title={fileName}>{fileName}</span>
           {noteCount > 0 && (
@@ -205,15 +279,61 @@ export function FileTile({
       </div>
       {!object.isFolder && (
         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-          <FeatureGate feature="shareLinks" label="Share Links">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
-              className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
-              title="Share"
-            >
-              <Link2 className="h-3.5 w-3.5" />
-            </button>
-          </FeatureGate>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 bg-background/80 backdrop-blur-sm border shadow-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onPreview}>
+                <Eye className="h-4 w-4" />
+                Preview
+              </DropdownMenuItem>
+              <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
+                <DropdownMenuItem onClick={onDownload}>
+                  <Download className="h-4 w-4" />
+                  Download
+                </DropdownMenuItem>
+              </CapabilityGate>
+              <DropdownMenuItem
+                onClick={() => can("shareLinks") ? setShareOpen(true) : openUpgradeModal()}
+              >
+                <Link2 className="h-4 w-4" />
+                Share...
+                {!can("shareLinks") && (
+                  <span className="ml-auto rounded-full border border-blue-500/30 bg-blue-500/20 px-1 text-[8px] font-medium text-blue-400">
+                    PRO
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenProperties}>
+                <SlidersHorizontal className="h-4 w-4" />
+                Properties
+              </DropdownMenuItem>
+              {hasVersioning && (
+                <DropdownMenuItem
+                  onClick={() => openVersionDialog({ connectionId, bucket, key: object.key })}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  History
+                </DropdownMenuItem>
+              )}
+              {canWrite && (
+                <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects" disableOnly>
+                  <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </CapabilityGate>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
       <div className="mt-2 flex items-center gap-1 min-w-0">

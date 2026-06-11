@@ -9,6 +9,7 @@ export const ACTION_VERBS: Record<ActivityAction, string> = {
   RENAME: "renamed",
   FOLDER_CREATE: "created folder",
   TAG_CHANGE: "updated tags on",
+  METADATA_CHANGE: "updated properties of",
   BUCKET_CREATE: "created bucket",
   BUCKET_DELETE: "deleted bucket",
   SHARE_CREATED: "shared",

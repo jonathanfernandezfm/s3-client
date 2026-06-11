@@ -90,10 +90,23 @@ export function FileBrowser({
 
   useEffect(() => {
     if (!isInfoOpen) return;
+    const prev = useInfoDrawerStore.getState().scope;
+    const prevObjectKey =
+      prev && prev.connectionId === connectionId && prev.bucket === bucket
+        ? prev.objectKey
+        : undefined;
     setInfoScope({
       connectionId,
       bucket,
       prefix: currentPath || undefined,
+      // Keep objectKey only if it's a direct child of currentPath (not a deeper
+      // descendant). startsWith("") is always true, so without the slice check
+      // navigating back to root would preserve any objectKey.
+      objectKey:
+        prevObjectKey?.startsWith(currentPath) &&
+        !prevObjectKey.slice(currentPath.length).includes("/")
+          ? prevObjectKey
+          : undefined,
     });
   }, [isInfoOpen, connectionId, bucket, currentPath, setInfoScope]);
 

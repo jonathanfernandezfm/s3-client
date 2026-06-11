@@ -25,9 +25,11 @@ import {
   MessageSquare,
   Link2,
   History,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
+import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { ShareDialog } from "@/components/shares/share-dialog";
 import { formatBytes, formatDate, getFileExtension, isImageFile, cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
@@ -116,6 +118,18 @@ export function FileRow({
   const versioning = useBucketVersioning(connectionId, bucket);
   const hasVersioning = versioning.data?.status === "Enabled" || versioning.data?.status === "Suspended";
   const openVersionDialog = useVersionHistoryDialogStore((s) => s.open);
+  const setInfoScope = useInfoDrawerStore((s) => s.setScope);
+  const openInfoDrawer = useInfoDrawerStore((s) => s.open);
+
+  const handleOpenProperties = () => {
+    setInfoScope({
+      connectionId,
+      bucket,
+      prefix: currentPath || undefined,
+      objectKey: object.key,
+    });
+    openInfoDrawer("properties");
+  };
 
   const href = object.isFolder
     ? `/app/browser/${connectionId}/${bucket}/${object.key}`
@@ -131,6 +145,7 @@ export function FileRow({
   return (
     <TableRow
       className={cn(
+        "group",
         isSelected && "bg-muted",
         isFolderDragOver && object.isFolder && "bg-blue-50 dark:bg-blue-950 ring-2 ring-blue-500 ring-inset"
       )}
@@ -221,7 +236,18 @@ export function FileRow({
         {object.lastModified ? formatDate(object.lastModified) : "-"}
       </TableCell>
       <TableCell className="w-8">
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
+          {!object.isFolder && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => { e.stopPropagation(); handleOpenProperties(); }}
+              title="Properties"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -252,6 +278,12 @@ export function FileRow({
                       PRO
                     </span>
                   )}
+                </DropdownMenuItem>
+              )}
+              {!object.isFolder && (
+                <DropdownMenuItem onClick={handleOpenProperties}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Properties
                 </DropdownMenuItem>
               )}
               {object.isFolder && (() => {

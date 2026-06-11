@@ -54,3 +54,23 @@ export interface ListObjectVersionsResponse {
   nextKeyMarker?: string;
   nextVersionIdMarker?: string;
 }
+
+export interface ObjectProperties {
+  contentType?: string;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  /** x-amz-meta-* entries, keys without the prefix (S3 returns them lowercased). */
+  metadata: Record<string, string>;
+  /** HeadObject omits StorageClass for STANDARD, so the API defaults it. */
+  storageClass: string;
+  serverSideEncryption?: string;
+  sseKmsKeyId?: string;
+  size?: number;
+  etag?: string;
+  lastModified?: string;
+  versionId?: string;
+  /** Raw x-amz-restore header for archived objects, when present. */
+  restore?: string;
+}
