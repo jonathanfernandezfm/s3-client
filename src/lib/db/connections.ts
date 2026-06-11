@@ -1,6 +1,7 @@
 import prisma from "./prisma";
 import type { Connection, Workspace } from "@/generated/prisma/client";
 import { encrypt, decrypt } from "@/lib/crypto";
+import type { Role } from "@/lib/roles";
 
 export type ConnectionInput = {
   name?: string | null;
@@ -13,7 +14,7 @@ export type ConnectionInput = {
 
 export type ConnectionUpdate = Partial<ConnectionInput>;
 
-export type ConnectionRole = "ADMIN" | "VIEWER";
+export type ConnectionRole = Role;
 
 export type WorkspaceAccess = {
   workspace: Workspace;
@@ -32,7 +33,7 @@ function getRoleForWorkspace(
   workspace: {
     type: "PERSONAL" | "TEAM";
     userId: string | null;
-    team: { members: Array<{ role: "ADMIN" | "VIEWER" }> } | null;
+    team: { members: Array<{ role: Role }> } | null;
   }
 ): ConnectionRole | null {
   if (workspace.type === "PERSONAL") {

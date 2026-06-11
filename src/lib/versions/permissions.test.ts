@@ -33,4 +33,14 @@ describe("canPerformVersionAction", () => {
       expect(canPerformVersionAction(null, action)).toBe(false);
     }
   });
+
+  test("EDITOR can perform write-level actions but not admin-only actions", () => {
+    expect(canPerformVersionAction("EDITOR", "list")).toBe(true);
+    expect(canPerformVersionAction("EDITOR", "presign")).toBe(true);
+    expect(canPerformVersionAction("EDITOR", "restore")).toBe(true);
+    expect(canPerformVersionAction("EDITOR", "undelete")).toBe(true);
+    expect(canPerformVersionAction("EDITOR", "copy")).toBe(true);
+    expect(canPerformVersionAction("EDITOR", "purge")).toBe(false);
+    expect(canPerformVersionAction("EDITOR", "bucket_toggle")).toBe(false);
+  });
 });

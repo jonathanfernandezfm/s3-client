@@ -17,10 +17,9 @@ export function canPerformVersionAction(
   action: VersionAction,
 ): boolean {
   if (role === "ADMIN") return true;
+  if (role === "EDITOR") return !ADMIN_ONLY.has(action);
   if (role === "VIEWER") {
-    if (ADMIN_ONLY.has(action)) return false;
-    if (WRITE_LEVEL.has(action)) return false;
-    return true;
+    return !ADMIN_ONLY.has(action) && !WRITE_LEVEL.has(action);
   }
   return false;
 }
