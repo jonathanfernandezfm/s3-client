@@ -47,7 +47,9 @@ export function FileGallery({
   currentPath,
   canWrite,
   isLoading,
+  onDelete,
   onPreview,
+  onDownload,
   onNavigate,
   paneId,
   onDrop,
@@ -184,6 +186,7 @@ export function FileGallery({
             isSelected={selectedItems.has(object.key)}
             onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
+            onDelete={() => onDelete(object.key)}
             onNavigate={onNavigate}
             paneId={paneId}
             allObjects={objects}
@@ -207,6 +210,8 @@ export function FileGallery({
             isSelected={selectedItems.has(object.key)}
             onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
+            onDelete={() => onDelete(object.key)}
+            onDownload={() => onDownload(object.key)}
             onNavigate={onNavigate}
             thumbnailUrl={thumbnailUrls[object.key]}
             paneId={paneId}
@@ -231,6 +236,8 @@ export function FileGallery({
             isSelected={selectedItems.has(object.key)}
             onSelect={(mods) => handleSelect(object.key, mods)}
             onPreview={() => onPreview(object)}
+            onDelete={() => onDelete(object.key)}
+            onDownload={() => onDownload(object.key)}
             onNavigate={onNavigate}
             paneId={paneId}
             allObjects={objects}

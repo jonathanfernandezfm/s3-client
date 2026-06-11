@@ -145,6 +145,7 @@ export function FileRow({
   return (
     <TableRow
       className={cn(
+        "group",
         isSelected && "bg-muted",
         isFolderDragOver && object.isFolder && "bg-blue-50 dark:bg-blue-950 ring-2 ring-blue-500 ring-inset"
       )}
@@ -235,7 +236,18 @@ export function FileRow({
         {object.lastModified ? formatDate(object.lastModified) : "-"}
       </TableCell>
       <TableCell className="w-8">
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
+          {!object.isFolder && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => { e.stopPropagation(); handleOpenProperties(); }}
+              title="Properties"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
