@@ -22,17 +22,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Tag, Trash2, X, Loader2, AlertCircle, Check, Link2 } from "lucide-react";
+import { Pencil, Tag, Trash2, X, Loader2, AlertCircle, Check, Link2, Download } from "lucide-react";
 import type { S3Object } from "@/types";
 import type { RenamePreviewItem } from "@/lib/bulk-rename";
 import { useCreateShareLink } from "@/lib/queries/share-links";
 import { FeatureGate } from "@/components/shared/feature-gate";
 import { CapabilityGate } from "@/components/health/capability-gate";
+import { triggerZipDownload } from "@/lib/zip/trigger-zip-download";
+import { zipDownloadName } from "@/lib/zip/zip-naming";
 
 interface BulkOpsPanelProps {
   paneId: string;
   connectionId: string;
   bucket: string;
+  currentPath: string;
   objects: S3Object[];
   canWrite: boolean;
 }
@@ -41,6 +44,7 @@ export function BulkOpsPanel({
   paneId,
   connectionId,
   bucket,
+  currentPath,
   objects,
   canWrite,
 }: BulkOpsPanelProps) {
@@ -91,11 +95,29 @@ export function BulkOpsPanel({
     setShareProgress(null);
   }
 
+  function downloadSelectionAsZip() {
+    const keys = selection.map((o) => o.key);
+    if (keys.length === 0) return;
+    triggerZipDownload({
+      connectionId,
+      bucket,
+      keys,
+      rootPrefix: currentPath,
+      filename: zipDownloadName(keys, bucket, currentPath),
+    });
+    addNotification({
+      type: "download",
+      title: "Zip download started",
+      description: `Zipping ${keys.length} item${keys.length !== 1 ? "s" : ""} — check your browser downloads`,
+      status: "completed",
+    });
+    clearSelection(paneId);
+  }
+
   const selection: S3Object[] = objects.filter((o) => selectedItems.has(o.key));
   const dialogOpen = dialog !== null && dialogPaneId === paneId;
   const showProgress = progress !== null && progress.paneId === paneId;
-  const showIdle =
-    canWrite && !showProgress && !dialogOpen && selectedItems.size >= 2;
+  const showIdle = !showProgress && !dialogOpen && selectedItems.size >= 2;
 
   const runLoop = useCallback(
     async <T,>(
@@ -232,38 +254,52 @@ export function BulkOpsPanel({
             {selectedItems.size} selected
           </span>
           <div className="h-5 w-px bg-border" />
-          <Button size="sm" variant="ghost" onClick={() => openDialog("rename", paneId)}>
-            <Pencil className="h-4 w-4" />
-            Rename
-          </Button>
-          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="object-tagging">
-            <Button size="sm" variant="ghost" onClick={() => openDialog("tag", paneId)}>
-              <Tag className="h-4 w-4" />
-              Tag
+          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects">
+            <Button size="sm" variant="ghost" onClick={downloadSelectionAsZip}>
+              <Download className="h-4 w-4" />
+              Download
             </Button>
           </CapabilityGate>
-          <FeatureGate feature="shareLinks" label="Share Links">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={shareAll}
-              disabled={shareProgress !== null}
-            >
-              <Link2 className="h-4 w-4" />
-              {shareProgress ? `${shareProgress.done}/${shareProgress.total}` : "Share"}
+          {canWrite && (
+            <Button size="sm" variant="ghost" onClick={() => openDialog("rename", paneId)}>
+              <Pencil className="h-4 w-4" />
+              Rename
             </Button>
-          </FeatureGate>
-          <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => openDialog("delete", paneId)}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
-          </CapabilityGate>
+          )}
+          {canWrite && (
+            <CapabilityGate connectionId={connectionId} bucket={bucket} capability="object-tagging">
+              <Button size="sm" variant="ghost" onClick={() => openDialog("tag", paneId)}>
+                <Tag className="h-4 w-4" />
+                Tag
+              </Button>
+            </CapabilityGate>
+          )}
+          {canWrite && (
+            <FeatureGate feature="shareLinks" label="Share Links">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={shareAll}
+                disabled={shareProgress !== null}
+              >
+                <Link2 className="h-4 w-4" />
+                {shareProgress ? `${shareProgress.done}/${shareProgress.total}` : "Share"}
+              </Button>
+            </FeatureGate>
+          )}
+          {canWrite && (
+            <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => openDialog("delete", paneId)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            </CapabilityGate>
+          )}
           <div className="h-5 w-px bg-border" />
           <Button
             size="icon"

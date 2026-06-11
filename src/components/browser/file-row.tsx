@@ -235,14 +235,12 @@ export function FileRow({
                   Preview
                 </DropdownMenuItem>
               )}
-              {!object.isFolder && (
-                <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
-                  <DropdownMenuItem onClick={onDownload}>
-                    <Download className="h-4 w-4" />
-                    Download
-                  </DropdownMenuItem>
-                </CapabilityGate>
-              )}
+              <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
+                <DropdownMenuItem onClick={onDownload}>
+                  <Download className="h-4 w-4" />
+                  {object.isFolder ? "Download as zip" : "Download"}
+                </DropdownMenuItem>
+              </CapabilityGate>
               {!object.isFolder && (
                 <DropdownMenuItem
                   onClick={() => can("shareLinks") ? setShareOpen(true) : openUpgradeModal()}

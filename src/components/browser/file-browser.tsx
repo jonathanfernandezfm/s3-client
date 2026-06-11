@@ -38,6 +38,8 @@ import { useShareLinkCounts } from "@/lib/queries/share-links";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { CapabilityGate } from "@/components/health/capability-gate";
+import { triggerZipDownload } from "@/lib/zip/trigger-zip-download";
+import { zipDownloadName } from "@/lib/zip/zip-naming";
 import type { S3Object } from "@/types";
 
 interface FileBrowserProps {
@@ -394,6 +396,23 @@ export function FileBrowser({
   };
 
   const handleDownload = async (key: string) => {
+    if (key.endsWith("/")) {
+      triggerZipDownload({
+        connectionId,
+        bucket,
+        keys: [key],
+        rootPrefix: currentPath,
+        filename: zipDownloadName([key], bucket, currentPath),
+      });
+      addNotification({
+        type: "download",
+        title: "Zip download started",
+        description: "Check your browser downloads for progress",
+        status: "completed",
+      });
+      return;
+    }
+
     try {
       const response = await fetch("/api/objects/download", {
         method: "POST",
@@ -646,6 +665,7 @@ export function FileBrowser({
         paneId={paneId}
         connectionId={connectionId}
         bucket={bucket}
+        currentPath={currentPath}
         objects={objects}
         canWrite={canWrite}
       />
