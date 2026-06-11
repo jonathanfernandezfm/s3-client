@@ -7,8 +7,6 @@ import {
 import { withAuth } from "@/lib/auth";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { createS3Client } from "@/lib/s3/client";
-import { decrypt } from "@/lib/crypto";
-import prisma from "@/lib/db/prisma";
 import { runBucketHealthCheck } from "@/lib/health/runner";
 
 type RouteContext = { params: Promise<{ id: string; bucket: string }> };
@@ -29,19 +27,14 @@ export const POST = withAuth<RouteContext>(
     if (!access) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-
-    const connection = await prisma.connection.findUnique({ where: { id } });
-    if (!connection) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (access.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "You do not have permission to update CORS configuration" },
+        { status: 403 },
+      );
     }
 
-    const client = createS3Client({
-      endpoint: connection.endpoint,
-      accessKeyId: connection.accessKeyId,
-      secretAccessKey: decrypt(connection.secretAccessKey),
-      region: connection.region,
-      forcePathStyle: connection.forcePathStyle,
-    });
+    const client = createS3Client(access.connection);
 
     let existingRules: CORSRule[] = [];
     try {
