@@ -16,6 +16,7 @@ interface OverviewTabProps {
 export function OverviewTab({ connectionId, bucket }: OverviewTabProps) {
   const { data: connections = [] } = useConnections();
   const connection = connections.find((c) => c.id === connectionId);
+  // Gates the bucket versioning toggle (infrastructure), not file editing — ADMIN only.
   const canEdit = connection?.role === "ADMIN";
 
   const { data: bucketsList = [] } = useBuckets(connectionId);
