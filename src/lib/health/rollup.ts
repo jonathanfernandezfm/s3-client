@@ -47,6 +47,7 @@ export function buildCapabilities(
       })),
       requiredIamActions: def.requiredIamActions,
       affects: def.affects,
+      fixAction: def.fixAction,
     };
   });
 }

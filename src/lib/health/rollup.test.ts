@@ -151,4 +151,14 @@ describe("buildCapabilities", () => {
     expect(caps.map((c) => c.key)).not.toContain("browse-buckets");
     expect(caps.map((c) => c.key)).toContain("browse-objects");
   });
+
+  test("capability with fixAction propagates it to the report", () => {
+    // cors-direct-uploads is the only capability with fixAction set
+    const caps = buildCapabilities("bucket", [
+      probe("get-bucket-cors", "cors-direct-uploads", "denied"),
+    ]);
+    const cors = caps.find((c) => c.key === "cors-direct-uploads");
+    expect(cors).toBeDefined();
+    expect(cors?.fixAction).toBe("apply-cors");
+  });
 });
