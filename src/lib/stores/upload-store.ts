@@ -1,44 +1,50 @@
 import { create } from "zustand";
 
+export type UploadStatus =
+  | "queued"
+  | "uploading"
+  | "paused"
+  | "completed"
+  | "error"
+  | "canceled";
+
+export const FINISHED_STATUSES: readonly UploadStatus[] = [
+  "completed",
+  "error",
+  "canceled",
+];
+
 export interface UploadItem {
   id: string;
-  file: File;
+  fileName: string;
+  size: number;
+  connectionId: string;
   bucket: string;
   key: string;
-  progress: number;
-  status: "pending" | "uploading" | "completed" | "error";
+  status: UploadStatus;
+  loaded: number;
   error?: string;
 }
 
 interface UploadState {
-  uploads: UploadItem[];
-  addUpload: (upload: Omit<UploadItem, "progress" | "status">) => void;
-  updateUpload: (id: string, updates: Partial<UploadItem>) => void;
-  removeUpload: (id: string) => void;
-  clearCompleted: () => void;
+  items: UploadItem[];
+  addItem: (item: UploadItem) => void;
+  updateItem: (id: string, updates: Partial<Omit<UploadItem, "id">>) => void;
+  removeItem: (id: string) => void;
+  clearFinished: () => void;
 }
 
 export const useUploadStore = create<UploadState>((set) => ({
-  uploads: [],
-  addUpload: (upload) =>
+  items: [],
+  addItem: (item) => set((state) => ({ items: [...state.items, item] })),
+  updateItem: (id, updates) =>
     set((state) => ({
-      uploads: [
-        ...state.uploads,
-        { ...upload, progress: 0, status: "pending" },
-      ],
+      items: state.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
     })),
-  updateUpload: (id, updates) =>
+  removeItem: (id) =>
+    set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+  clearFinished: () =>
     set((state) => ({
-      uploads: state.uploads.map((u) =>
-        u.id === id ? { ...u, ...updates } : u
-      ),
-    })),
-  removeUpload: (id) =>
-    set((state) => ({
-      uploads: state.uploads.filter((u) => u.id !== id),
-    })),
-  clearCompleted: () =>
-    set((state) => ({
-      uploads: state.uploads.filter((u) => u.status !== "completed"),
+      items: state.items.filter((i) => !FINISHED_STATUSES.includes(i.status)),
     })),
 }));
