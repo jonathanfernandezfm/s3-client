@@ -82,6 +82,7 @@ export const POST = withAuth(async (req, { user }) => {
   const passthrough = new PassThrough();
   archive.on("warning", (err: ArchiverError) => console.warn("[download-zip] warning:", err));
   archive.pipe(passthrough);
+  archive.on("error", (err) => passthrough.destroy(err));
 
   void (async () => {
     for (const entry of entries) {
@@ -129,6 +130,8 @@ function appendEntry(
       archive.off("entry", onEntry);
       archive.off("error", onError);
     };
+    // "entry" fires after the source stream is fully consumed — awaiting it
+    // enforces sequential S3 fetches and prevents idle-timeout on later objects.
     archive.once("entry", onEntry);
     archive.once("error", onError);
     archive.append(body, { name });
