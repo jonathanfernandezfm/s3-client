@@ -88,10 +88,18 @@ export function FileBrowser({
 
   useEffect(() => {
     if (!isInfoOpen) return;
+    const prev = useInfoDrawerStore.getState().scope;
+    const prevObjectKey =
+      prev && prev.connectionId === connectionId && prev.bucket === bucket
+        ? prev.objectKey
+        : undefined;
     setInfoScope({
       connectionId,
       bucket,
       prefix: currentPath || undefined,
+      objectKey: prevObjectKey?.startsWith(currentPath)
+        ? prevObjectKey
+        : undefined,
     });
   }, [isInfoOpen, connectionId, bucket, currentPath, setInfoScope]);
 

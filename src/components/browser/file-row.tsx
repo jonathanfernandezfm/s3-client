@@ -25,9 +25,11 @@ import {
   MessageSquare,
   Link2,
   History,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
+import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { ShareDialog } from "@/components/shares/share-dialog";
 import { formatBytes, formatDate, getFileExtension, isImageFile, cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
@@ -116,6 +118,18 @@ export function FileRow({
   const versioning = useBucketVersioning(connectionId, bucket);
   const hasVersioning = versioning.data?.status === "Enabled" || versioning.data?.status === "Suspended";
   const openVersionDialog = useVersionHistoryDialogStore((s) => s.open);
+  const setInfoScope = useInfoDrawerStore((s) => s.setScope);
+  const openInfoDrawer = useInfoDrawerStore((s) => s.open);
+
+  const handleOpenProperties = () => {
+    setInfoScope({
+      connectionId,
+      bucket,
+      prefix: currentPath || undefined,
+      objectKey: object.key,
+    });
+    openInfoDrawer("properties");
+  };
 
   const href = object.isFolder
     ? `/app/browser/${connectionId}/${bucket}/${object.key}`
@@ -254,6 +268,12 @@ export function FileRow({
                       PRO
                     </span>
                   )}
+                </DropdownMenuItem>
+              )}
+              {!object.isFolder && (
+                <DropdownMenuItem onClick={handleOpenProperties}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Properties
                 </DropdownMenuItem>
               )}
               {object.isFolder && (() => {
