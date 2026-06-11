@@ -260,6 +260,48 @@ describe("FileUploader — multipart mode", () => {
     expect(deps.completeUpload).not.toHaveBeenCalled();
   });
 
+  it("pause during signParts aborts promptly and resume recovers", async () => {
+    let rejectSign!: (err: unknown) => void;
+    let signCalls = 0;
+    const deps = makeDeps({
+      signParts: vi.fn(
+        (
+          _params: { partNumbers: number[] },
+          signal?: AbortSignal
+        ) =>
+          new Promise<{ urls: Record<number, string> }>((resolve, reject) => {
+            signCalls++;
+            if (signCalls === 1) {
+              rejectSign = reject;
+              signal?.addEventListener(
+                "abort",
+                () => reject(new DOMException("Aborted", "AbortError")),
+                { once: true }
+              );
+            } else {
+              resolve({
+                urls: Object.fromEntries(
+                  _params.partNumbers.map((n) => [n, `https://signed/${n}`])
+                ),
+              });
+            }
+          })
+      ),
+    });
+    const { statuses, cb } = collectStatuses();
+    const uploader = new FileUploader(makeFile(10), target, deps, cb);
+
+    const run = uploader.start();
+    await flush();
+    uploader.pause(); // abort while signParts is in flight
+    await run;
+    expect(statuses.at(-1)?.status).toBe("paused");
+    void rejectSign;
+
+    await uploader.start();
+    expect(statuses.at(-1)?.status).toBe("completed");
+  });
+
   it("late cancel during completeUpload suppresses the completed status", async () => {
     let resolveComplete!: () => void;
     const deps = makeDeps({

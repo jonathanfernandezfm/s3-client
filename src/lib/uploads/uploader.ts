@@ -16,10 +16,12 @@ export interface UploaderCallbacks {
 
 export interface UploaderDeps {
   createUpload: (
-    params: UploadTarget & { fileSize: number; contentType: string }
+    params: UploadTarget & { fileSize: number; contentType: string },
+    signal?: AbortSignal
   ) => Promise<CreateUploadResponse>;
   signParts: (
-    params: UploadTarget & { uploadId: string; partNumbers: number[] }
+    params: UploadTarget & { uploadId: string; partNumbers: number[] },
+    signal?: AbortSignal
   ) => Promise<{ urls: Record<number, string> }>;
   putBlob: (
     url: string,
@@ -71,11 +73,14 @@ export class FileUploader {
     this.cb.onStatus("uploading");
     try {
       if (!this.created) {
-        this.created = await this.deps.createUpload({
-          ...this.target,
-          fileSize: this.file.size,
-          contentType: this.file.type || "application/octet-stream",
-        });
+        this.created = await this.deps.createUpload(
+          {
+            ...this.target,
+            fileSize: this.file.size,
+            contentType: this.file.type || "application/octet-stream",
+          },
+          this.abortController!.signal
+        );
       }
       if (this.created.mode === "single") {
         await this.uploadSingle(this.created.url);
@@ -176,11 +181,14 @@ export class FileUploader {
         throw new DOMException("Aborted", "AbortError");
       }
       const batch = pending.slice(i, i + SIGN_BATCH);
-      const { urls } = await this.deps.signParts({
-        ...this.target,
-        uploadId,
-        partNumbers: batch,
-      });
+      const { urls } = await this.deps.signParts(
+        {
+          ...this.target,
+          uploadId,
+          partNumbers: batch,
+        },
+        this.abortController!.signal
+      );
       await this.runPool(batch, async (partNumber) => {
         const url = urls[partNumber];
         if (!url) {

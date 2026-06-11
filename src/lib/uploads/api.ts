@@ -3,12 +3,14 @@ import type { CompletedPart, CreateUploadResponse, UploadTarget } from "./types"
 async function requestJson<T>(
   url: string,
   method: string,
-  body: unknown
+  body: unknown,
+  signal?: AbortSignal
 ): Promise<T> {
   const res = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -18,17 +20,23 @@ async function requestJson<T>(
 }
 
 export function createUpload(
-  params: UploadTarget & { fileSize: number; contentType: string }
+  params: UploadTarget & { fileSize: number; contentType: string },
+  signal?: AbortSignal
 ): Promise<CreateUploadResponse> {
-  return requestJson("/api/objects/multipart/create", "POST", params);
+  return requestJson("/api/objects/multipart/create", "POST", params, signal);
 }
 
 export function signParts(
-  params: UploadTarget & { uploadId: string; partNumbers: number[] }
+  params: UploadTarget & { uploadId: string; partNumbers: number[] },
+  signal?: AbortSignal
 ): Promise<{ urls: Record<number, string> }> {
-  return requestJson("/api/objects/multipart/sign-parts", "POST", params);
+  return requestJson("/api/objects/multipart/sign-parts", "POST", params, signal);
 }
 
+/**
+ * Deliberately not abortable: once finalization starts the server completes
+ * it regardless, so aborting the fetch would only desync the UI.
+ */
 export function completeUpload(
   params: UploadTarget & { uploadId?: string; parts?: CompletedPart[] }
 ): Promise<{ success: boolean }> {
