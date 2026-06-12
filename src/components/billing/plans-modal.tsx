@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
+import { track } from "@/lib/analytics";
 import { useTier } from "@/hooks/use-tier";
 import { PLAN_DISPLAYS } from "@/lib/subscriptions/plan-display";
 
@@ -37,6 +38,7 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
       const res = await fetch("/api/billing/checkout", { method: "POST" });
       const data = await res.json();
       if (data.url) {
+        track({ name: "checkout_initiated" });
         close();
         window.location.href = data.url;
       }
