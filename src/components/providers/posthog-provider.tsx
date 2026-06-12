@@ -6,6 +6,17 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useEffect, Suspense } from "react";
 
+let posthogInitialized = false;
+const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+if (posthogKey && !posthogInitialized) {
+  posthog.init(posthogKey, {
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+    capture_pageview: false,
+    capture_pageleave: true,
+  });
+  posthogInitialized = true;
+}
+
 function PostHogPageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -41,16 +52,6 @@ function PostHogUserIdentify() {
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    if (!key || posthog.__loaded) return;
-    posthog.init(key, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
-      capture_pageview: false,
-      capture_pageleave: true,
-    });
-  }, []);
-
   return (
     <PHProvider client={posthog}>
       <Suspense fallback={null}>

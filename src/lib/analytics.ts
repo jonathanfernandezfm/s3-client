@@ -12,5 +12,9 @@ export type TrackableEvent =
 
 export function track(event: TrackableEvent) {
   if (typeof window === "undefined") return;
-  posthog.capture(event.name, "props" in event ? event.props : {});
+  try {
+    posthog.capture(event.name, "props" in event ? event.props : {});
+  } catch {
+    // analytics must never break application flow
+  }
 }
