@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Role } from "@/lib/roles";
+import { track } from "@/lib/analytics";
 
 export interface ConnectionResponse {
   id: string;
@@ -124,8 +125,9 @@ export function useCreateConnection() {
 
   return useMutation({
     mutationFn: (data: ConnectionInput) => createConnection(data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: connectionKeys.all });
+      track({ name: "connection_created", props: { workspace_type: data.workspaceType } });
     },
   });
 }
@@ -149,6 +151,7 @@ export function useDeleteConnection() {
     mutationFn: deleteConnection,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: connectionKeys.all });
+      track({ name: "connection_deleted" });
     },
   });
 }
