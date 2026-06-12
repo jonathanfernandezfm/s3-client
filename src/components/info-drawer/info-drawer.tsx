@@ -92,7 +92,7 @@ export function InfoDrawer() {
               <h2 className="text-sm font-semibold">{TAB_META[activeTab].label}</h2>
             </div>
             {scopeLabel && (
-              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
+              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-65">
                 {scopeLabel}
               </p>
             )}

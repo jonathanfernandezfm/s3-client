@@ -35,6 +35,9 @@ import { Loader2, RefreshCw, Star, History, MessageSquare, Activity } from "luci
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { useNotesForKey, useNoteCounts } from "@/lib/queries/notes";
 import { useShareLinkCounts } from "@/lib/queries/share-links";
+import { useFileTags } from "@/lib/queries/tags";
+import { distinctTagValues } from "@/lib/tags";
+import { TagFilterBar } from "./tag-filter-bar";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { CapabilityGate } from "@/components/health/capability-gate";
@@ -148,6 +151,30 @@ export function FileBrowser({
     keys: fileKeys,
   });
   const fileShareCounts = fileShareCountsQuery.data ?? {};
+
+  const fileTagsQuery = useFileTags({ connectionId, bucket, keys: fileKeys });
+  const fileTags = fileTagsQuery.data ?? {};
+  const folderTagValues = distinctTagValues(fileTags);
+
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveTag(null);
+  }, [connectionId, bucket, currentPath]);
+
+  const handleTagToggle = useCallback(
+    (tag: string) => {
+      setActiveTag((prev) => (prev === tag ? null : tag));
+      clearSelection(paneId);
+    },
+    [clearSelection, paneId]
+  );
+
+  const visibleObjects = activeTag
+    ? objects.filter(
+        (o) => o.isFolder || (fileTags[o.key] ?? []).includes(activeTag)
+      )
+    : objects;
 
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
 
@@ -569,6 +596,13 @@ export function FileBrowser({
         </div>
       </div>
 
+      <TagFilterBar
+        tags={folderTagValues}
+        activeTag={activeTag}
+        onToggle={handleTagToggle}
+        onClear={() => handleTagToggle(activeTag ?? "")}
+      />
+
       <div className="relative flex-1 flex flex-col">
         {versioning.data?.status === "Suspended" && (
           <div className="px-3 py-2 text-xs bg-yellow-500/10 border border-yellow-500/30 rounded mb-2">
@@ -585,7 +619,7 @@ export function FileBrowser({
         >
           {paneState.viewMode === "grid" ? (
             <FileGallery
-              objects={objects}
+              objects={visibleObjects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
@@ -603,10 +637,13 @@ export function FileBrowser({
               onDragEnd={handleDragEnd}
               folderNoteCounts={folderNoteCounts}
               fileShareCounts={fileShareCounts}
+              fileTags={fileTags}
+              activeTag={activeTag}
+              onTagClick={handleTagToggle}
             />
           ) : (
             <FileList
-              objects={objects}
+              objects={visibleObjects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
@@ -624,6 +661,9 @@ export function FileBrowser({
               onDragEnd={handleDragEnd}
               folderNoteCounts={folderNoteCounts}
               fileShareCounts={fileShareCounts}
+              fileTags={fileTags}
+              activeTag={activeTag}
+              onTagClick={handleTagToggle}
             />
           )}
           {hasMore && !isPending && (
@@ -679,7 +719,7 @@ export function FileBrowser({
         connectionId={connectionId}
         bucket={bucket}
         currentPath={currentPath}
-        objects={objects}
+        objects={visibleObjects}
         canWrite={canWrite}
       />
 

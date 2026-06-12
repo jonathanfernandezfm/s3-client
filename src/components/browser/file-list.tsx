@@ -45,6 +45,9 @@ interface FileListProps {
   onDragEnd?: () => void;
   folderNoteCounts?: Record<string, number>;
   fileShareCounts?: Record<string, number>;
+  fileTags?: Record<string, string[]>;
+  activeTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
 export function FileList({
@@ -66,6 +69,9 @@ export function FileList({
   onDragEnd,
   folderNoteCounts = {},
   fileShareCounts = {},
+  fileTags = {},
+  activeTag,
+  onTagClick,
 }: FileListProps) {
   const getPaneState = useBrowserStore((s) => s.getPaneState);
 
@@ -222,6 +228,9 @@ export function FileList({
               canDropOnFolder={isValidDropTarget && canWrite}
               noteCount={object.isFolder ? (folderNoteCounts[object.key] ?? 0) : 0}
               shareCount={!object.isFolder ? (fileShareCounts[object.key] ?? 0) : 0}
+              tags={!object.isFolder ? (fileTags[object.key] ?? []) : []}
+              activeTag={activeTag}
+              onTagClick={onTagClick}
             />
           ))}
         </TableBody>

@@ -110,6 +110,9 @@ export function SearchResultsGroup({
         const isFolder = r.key.endsWith("/");
         const label = basename(r.key) || r.bucket;
         const subtitle = `${r.connectionName ?? "connection"} · ${r.bucket}${dirname(r.key) ? "/" + dirname(r.key) : ""}`;
+        const tagValues = Array.isArray(r.tags)
+          ? (r.tags as unknown[]).filter((t): t is string => typeof t === "string")
+          : [];
         return (
           <CommandItem
             key={r.id}
@@ -121,8 +124,18 @@ export function SearchResultsGroup({
               <FileIcon mime={r.mime} extension={r.extension} isFolder={isFolder} />
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate">
-                <HighlightMatches text={label} query={data?.parsedQuery.freeText ?? ""} />
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate">
+                  <HighlightMatches text={label} query={data?.parsedQuery.freeText ?? ""} />
+                </span>
+                {tagValues.slice(0, 2).map((t) => (
+                  <span
+                    key={t}
+                    className="shrink-0 rounded-full border border-border bg-muted px-1.5 text-[10px] leading-4 text-muted-foreground"
+                  >
+                    {t}
+                  </span>
+                ))}
               </span>
               <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
             </div>

@@ -206,10 +206,8 @@ export async function indexTagsForKeys(input: {
   bucket: string;
   keys: string[];
 }): Promise<Record<string, string[]>> {
-  const result: Record<string, string[]> = {};
-
-  if (!isSearchIndexEnabled()) return result;
-
+  if (!isSearchIndexEnabled()) return {};
+  if (input.keys.length === 0) return {};
   try {
     const rows = await prisma.objectIndex.findMany({
       where: {
@@ -219,16 +217,20 @@ export async function indexTagsForKeys(input: {
       },
       select: { key: true, tags: true },
     });
-
+    const out: Record<string, string[]> = {};
     for (const row of rows) {
       const tags = Array.isArray(row.tags)
-        ? (row.tags as string[])
+        ? row.tags.filter((t): t is string => typeof t === "string")
         : [];
-      result[row.key] = tags;
+      if (tags.length > 0) out[row.key] = tags;
     }
+    return out;
   } catch (err) {
-    logFailure("tagsForKeys", { connectionId: input.connectionId, bucket: input.bucket, count: input.keys.length }, err);
+    logFailure(
+      "tagsForKeys",
+      { connectionId: input.connectionId, bucket: input.bucket, count: input.keys.length },
+      err
+    );
+    return {};
   }
-
-  return result;
 }

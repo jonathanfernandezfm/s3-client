@@ -62,6 +62,7 @@ export function useInvalidateNotesAndObjects() {
   const invalidateNotes = useInvalidateNotes();
   return () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.tags.all });
     invalidateNotes();
   };
 }

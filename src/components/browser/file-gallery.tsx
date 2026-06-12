@@ -38,6 +38,9 @@ interface FileGalleryProps {
   onDragEnd?: () => void;
   folderNoteCounts?: Record<string, number>;
   fileShareCounts?: Record<string, number>;
+  fileTags?: Record<string, string[]>;
+  activeTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
 export function FileGallery({
@@ -59,6 +62,9 @@ export function FileGallery({
   onDragEnd,
   folderNoteCounts = {},
   fileShareCounts = {},
+  fileTags = {},
+  activeTag,
+  onTagClick,
 }: FileGalleryProps) {
   const getPaneState = useBrowserStore((s) => s.getPaneState);
   const paneState = getPaneState(paneId);
@@ -223,6 +229,9 @@ export function FileGallery({
             isDragging={isDragging}
             canDropOnFolder={isValidDropTarget && canWrite}
             shareCount={fileShareCounts[object.key] ?? 0}
+            tags={fileTags[object.key] ?? []}
+            activeTag={activeTag}
+            onTagClick={onTagClick}
           />
         ))}
         {otherObjects.map((object) => (
@@ -248,6 +257,9 @@ export function FileGallery({
             isDragging={isDragging}
             canDropOnFolder={isValidDropTarget && canWrite}
             shareCount={fileShareCounts[object.key] ?? 0}
+            tags={fileTags[object.key] ?? []}
+            activeTag={activeTag}
+            onTagClick={onTagClick}
           />
         ))}
       </div>

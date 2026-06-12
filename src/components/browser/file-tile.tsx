@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2,
-  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal,
+  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal, Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,8 @@ import { findBookmark } from "@/lib/bookmarks-helpers";
 import { useTier } from "@/hooks/use-tier";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import { CapabilityGate } from "@/components/health/capability-gate";
+import { TagChips } from "./tag-chips";
+import { TagEditorDialog } from "./tag-editor-dialog";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -57,6 +59,9 @@ interface FileTileProps {
   canDropOnFolder?: boolean;
   noteCount?: number;
   shareCount?: number;
+  tags?: string[];
+  activeTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
 export function FileTile({
@@ -82,10 +87,14 @@ export function FileTile({
   canDropOnFolder,
   noteCount = 0,
   shareCount = 0,
+  tags = [],
+  activeTag,
+  onTagClick,
 }: FileTileProps) {
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const { can } = useTier();
   const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
@@ -295,6 +304,12 @@ export function FileTile({
                 <Eye className="h-4 w-4" />
                 Preview
               </DropdownMenuItem>
+              <CapabilityGate connectionId={connectionId} bucket={bucket} capability="object-tagging" disableOnly>
+                <DropdownMenuItem onClick={() => setTagsOpen(true)}>
+                  <Tag className="h-4 w-4" />
+                  Tags...
+                </DropdownMenuItem>
+              </CapabilityGate>
               <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
                 <DropdownMenuItem onClick={onDownload}>
                   <Download className="h-4 w-4" />
@@ -347,6 +362,9 @@ export function FileTile({
             {shareCount}
           </span>
         )}
+        {tags.length > 0 && (
+          <TagChips tags={tags} max={2} activeTag={activeTag} onTagClick={onTagClick} />
+        )}
       </div>
       {shareOpen && !object.isFolder && (
         <ShareDialog
@@ -355,6 +373,16 @@ export function FileTile({
           connectionId={connectionId}
           bucket={bucket}
           fileKey={object.key}
+        />
+      )}
+      {tagsOpen && !object.isFolder && (
+        <TagEditorDialog
+          open={tagsOpen}
+          onClose={() => setTagsOpen(false)}
+          connectionId={connectionId}
+          bucket={bucket}
+          objectKey={object.key}
+          canWrite={canWrite}
         />
       )}
     </div>

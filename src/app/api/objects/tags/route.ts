@@ -8,7 +8,7 @@ const MAX_KEYS = 500;
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   const { connectionId, bucket, keys } = await req.json();
 
-  if (!connectionId || !bucket || !Array.isArray(keys)) {
+  if (!connectionId || !bucket || !Array.isArray(keys) || !keys.every((k) => typeof k === "string")) {
     return NextResponse.json(
       { error: "connectionId, bucket, and keys[] are required" },
       { status: 400 }

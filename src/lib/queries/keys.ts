@@ -43,6 +43,13 @@ export const queryKeys = {
     countsForBucket: (connectionId: string, bucket: string) =>
       [...queryKeys.notes.all, "counts", connectionId, bucket] as const,
   },
+  tags: {
+    all: ["tags"] as const,
+    object: (connectionId: string, bucket: string, key: string) =>
+      [...queryKeys.tags.all, "object", connectionId, bucket, key] as const,
+    batch: (connectionId: string, bucket: string, sortedKeys: string[]) =>
+      [...queryKeys.tags.all, "batch", connectionId, bucket, sortedKeys.join("|")] as const,
+  },
   shareLinks: {
     all: ["share-links"] as const,
     list: (connectionId: string, bucket?: string, key?: string) =>

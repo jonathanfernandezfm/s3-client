@@ -26,7 +26,10 @@ import {
   Link2,
   History,
   SlidersHorizontal,
+  Tag,
 } from "lucide-react";
+import { TagChips } from "./tag-chips";
+import { TagEditorDialog } from "./tag-editor-dialog";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
@@ -63,6 +66,9 @@ interface FileRowProps {
   canDropOnFolder?: boolean;
   noteCount?: number;
   shareCount?: number;
+  tags?: string[];
+  activeTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
 function getFileIcon(key: string, isFolder: boolean) {
@@ -101,6 +107,9 @@ export function FileRow({
   canDropOnFolder,
   noteCount = 0,
   shareCount = 0,
+  tags = [],
+  activeTag,
+  onTagClick,
 }: FileRowProps) {
   const Icon = getFileIcon(object.key, object.isFolder);
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, canPreview, fileName } = useFileItemBehavior({
@@ -110,6 +119,7 @@ export function FileRow({
   });
 
   const [shareOpen, setShareOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const { can } = useTier();
   const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
@@ -227,6 +237,9 @@ export function FileRow({
               {shareCount}
             </span>
           )}
+          {!object.isFolder && tags.length > 0 && (
+            <TagChips tags={tags} activeTag={activeTag} onTagClick={onTagClick} />
+          )}
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground">
@@ -260,6 +273,14 @@ export function FileRow({
                   <Eye className="h-4 w-4" />
                   Preview
                 </DropdownMenuItem>
+              )}
+              {!object.isFolder && (
+                <CapabilityGate connectionId={connectionId} bucket={bucket} capability="object-tagging" disableOnly>
+                  <DropdownMenuItem onClick={() => setTagsOpen(true)}>
+                    <Tag className="h-4 w-4" />
+                    Tags...
+                  </DropdownMenuItem>
+                </CapabilityGate>
               )}
               <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
                 <DropdownMenuItem onClick={onDownload}>
@@ -332,6 +353,16 @@ export function FileRow({
           connectionId={connectionId}
           bucket={bucket}
           fileKey={object.key}
+        />
+      )}
+      {tagsOpen && !object.isFolder && (
+        <TagEditorDialog
+          open={tagsOpen}
+          onClose={() => setTagsOpen(false)}
+          connectionId={connectionId}
+          bucket={bucket}
+          objectKey={object.key}
+          canWrite={canWrite}
         />
       )}
     </TableRow>
