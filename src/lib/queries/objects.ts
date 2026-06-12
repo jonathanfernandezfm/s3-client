@@ -10,6 +10,7 @@ import { queryKeys } from "./keys";
 import type { ObjectProperties, S3Object } from "@/types";
 import { useInvalidateActivity } from "./activity";
 import { useInvalidateNotes } from "./notes";
+import { track } from "@/lib/analytics";
 
 interface ListObjectsResponse {
   objects: S3Object[];
@@ -132,10 +133,11 @@ export function useDeleteObjects(connectionId: string, bucket: string) {
 
   return useMutation({
     mutationFn: (keys: string[]) => deleteObjects(connectionId, bucket, keys),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
       invalidateActivity();
       invalidateNotes();
+      track({ name: "files_deleted", props: { count: variables.length } });
     },
   });
 }
@@ -149,6 +151,7 @@ export function useCreateFolder(connectionId: string, bucket: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
       invalidateActivity();
+      track({ name: "folder_created" });
     },
   });
 }
@@ -190,10 +193,17 @@ export function useCopyObjects() {
 
   return useMutation({
     mutationFn: copyObjects,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
       invalidateActivity();
       invalidateNotes();
+      track({
+        name: "files_copied",
+        props: {
+          count: variables.sourceKeys.length,
+          cross_connection: variables.sourceConnectionId !== variables.targetConnectionId,
+        },
+      });
     },
   });
 }
@@ -205,10 +215,17 @@ export function useMoveObjects() {
 
   return useMutation({
     mutationFn: moveObjects,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
       invalidateActivity();
       invalidateNotes();
+      track({
+        name: "files_moved",
+        props: {
+          count: variables.sourceKeys.length,
+          cross_connection: variables.sourceConnectionId !== variables.targetConnectionId,
+        },
+      });
     },
   });
 }
