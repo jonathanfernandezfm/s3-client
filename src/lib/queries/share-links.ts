@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "./keys";
+import { track } from "@/lib/analytics";
 
 export type ShareLinkResponse = {
   id: string;
@@ -63,6 +64,7 @@ export function useCreateShareLink() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.shareLinks.all });
+      track({ name: "share_link_created" });
     },
   });
 }
