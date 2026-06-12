@@ -11,6 +11,7 @@ starting, honor its STOP conditions, and update your row when done.
 |------|-------|----------|--------|------------|--------|
 | 001 | Enforce monthly operation quotas and team size caps | P1 | M | — | TODO |
 | 002 | Design spike: Lifecycle rules spec | P2 | M | — | TODO |
+| 003 | PostHog Analytics Tracking | P2 | S | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
