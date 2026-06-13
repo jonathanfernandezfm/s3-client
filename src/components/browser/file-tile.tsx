@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2,
-  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal, Tag,
+  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal, Tag, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { ShareDialog } from "@/components/shares/share-dialog";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
+import { usePropertiesDrawerStore } from "@/lib/stores/properties-drawer-store";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
 import { useTier } from "@/hooks/use-tier";
@@ -105,10 +106,30 @@ export function FileTile({
   const openVersionDialog = useVersionHistoryDialogStore((s) => s.open);
   const setInfoScope = useInfoDrawerStore((s) => s.setScope);
   const openInfoDrawer = useInfoDrawerStore((s) => s.open);
+  const openPropertiesDrawer = usePropertiesDrawerStore((s) => s.open);
 
   const handleOpenProperties = () => {
-    setInfoScope({ connectionId, bucket, prefix: currentPath || undefined, objectKey: object.key });
-    openInfoDrawer("properties");
+    openPropertiesDrawer({ connectionId, bucket, objectKey: object.key });
+  };
+
+  const handleOpenActivity = () => {
+    setInfoScope({
+      connectionId,
+      bucket,
+      prefix: currentPath || undefined,
+      objectKey: object.key,
+    });
+    openInfoDrawer("activity");
+  };
+
+  const handleOpenVersions = () => {
+    setInfoScope({
+      connectionId,
+      bucket,
+      prefix: currentPath || undefined,
+      objectKey: object.key,
+    });
+    openInfoDrawer("versions");
   };
 
   const { dragHandlers, folderDropHandlers, isFolderDragOver, isBeingDragged, fileName } =
@@ -331,6 +352,16 @@ export function FileTile({
                 <SlidersHorizontal className="h-4 w-4" />
                 Properties
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenActivity}>
+                <Activity className="h-4 w-4" />
+                Activity
+              </DropdownMenuItem>
+              {hasVersioning && (
+                <DropdownMenuItem onClick={handleOpenVersions}>
+                  <History className="h-4 w-4" />
+                  Versions
+                </DropdownMenuItem>
+              )}
               {hasVersioning && (
                 <DropdownMenuItem
                   onClick={() => openVersionDialog({ connectionId, bucket, key: object.key })}
