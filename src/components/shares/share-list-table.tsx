@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useShareLinks, useRevokeShareLink, type ShareLinkResponse } from "@/lib/queries/share-links";
+import { formatDate } from "@/lib/utils";
 
 const STATUS_CLASSES: Record<ShareLinkResponse["status"], string> = {
   active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -68,7 +69,7 @@ export function ShareListTable({ connectionId }: { connectionId: string }) {
                 {s.useCount}{s.maxUses ? ` / ${s.maxUses}` : ""}
               </TableCell>
               <TableCell className="text-muted-foreground text-xs">
-                {s.expiresAt ? new Date(s.expiresAt).toLocaleDateString() : "Never"}
+                {s.expiresAt ? formatDate(s.expiresAt) : "Never"}
               </TableCell>
               <TableCell className="text-muted-foreground text-xs">{s.createdByDisplayName}</TableCell>
               <TableCell className="text-right">

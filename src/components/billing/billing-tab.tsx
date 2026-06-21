@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, getTierDisplayName } from "@/lib/subscriptions/tiers";
+import { formatNumber } from "@/lib/utils";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import type { TierConfig } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/generated/prisma/client";
@@ -126,7 +127,7 @@ export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTa
               label="Operations"
               current={usage.operationCount}
               limit={limits.monthlyOperations}
-              formatValue={(n) => n.toLocaleString()}
+              formatValue={formatNumber}
             />
             <UsageMeter
               label="Connections"

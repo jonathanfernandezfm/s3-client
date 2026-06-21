@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeTime } from "@/components/info-drawer/format-time";
+import { formatNumber } from "@/lib/utils";
 import { useTier } from "@/hooks/use-tier";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import {
@@ -110,7 +111,7 @@ export function ConnectionIndexingCard({
           <div className="flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             <span className="font-medium">
-              Indexing… {data.indexed.toLocaleString()} objects
+              Indexing… {formatNumber(data.indexed)} objects
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -132,7 +133,7 @@ export function ConnectionIndexingCard({
         <CardContent className="flex flex-col flex-1 items-center justify-center text-center">
           <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
           <p className="text-sm font-semibold mb-1">
-            {data.indexed.toLocaleString()} objects indexed
+            {formatNumber(data.indexed)} objects indexed
             {isPartial ? " · 2M cap reached" : ""}
           </p>
           {isPartial ? (

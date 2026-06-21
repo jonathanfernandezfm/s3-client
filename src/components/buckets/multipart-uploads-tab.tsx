@@ -12,6 +12,7 @@ import {
   formatRelativeAge,
   formatInitiator,
 } from "./multipart-helpers";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AbortUploadsDialog } from "./abort-uploads-dialog";
 import { useNotificationStore } from "@/lib/stores/notification-store";
@@ -211,7 +212,7 @@ export function MultipartUploadsTab({
                     </span>
                   </td>
                   <td className="p-3 whitespace-nowrap">
-                    <div>{new Date(u.initiated).toLocaleDateString()}</div>
+                    <div>{formatDate(u.initiated)}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatRelativeAge(u.initiated)}
                     </div>

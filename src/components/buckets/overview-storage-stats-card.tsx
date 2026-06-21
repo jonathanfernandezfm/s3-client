@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Loader2, RefreshCw } from "lucide-react";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, formatNumber } from "@/lib/utils";
 import { useBucketStats } from "@/lib/queries/buckets";
 
 interface OverviewStorageStatsCardProps {
@@ -73,7 +73,7 @@ export function OverviewStorageStatsCard({
                   Objects
                 </div>
                 <div className="text-2xl font-semibold">
-                  {stats.data.objectCount.toLocaleString()}
+                  {formatNumber(stats.data.objectCount)}
                 </div>
               </div>
               <div>
@@ -101,7 +101,7 @@ export function OverviewStorageStatsCard({
                       <tr key={row.class} className="border-t">
                         <td className="p-2 font-mono text-xs">{row.class}</td>
                         <td className="p-2 text-right">
-                          {row.count.toLocaleString()}
+                          {formatNumber(row.count)}
                         </td>
                         <td className="p-2 text-right">
                           {formatBytes(row.size)}

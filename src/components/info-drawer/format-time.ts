@@ -11,5 +11,5 @@ export function formatRelativeTime(isoString: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
 
   const d = new Date(isoString);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPreviewKind, isImageFile } from './utils';
+import { getPreviewKind, isImageFile, formatDate, formatNumber } from './utils';
 
 describe('getPreviewKind', () => {
   it('returns image for .JPG (case-insensitive)', () => {
@@ -42,5 +42,25 @@ describe('isImageFile', () => {
 
   it('returns false for .pdf (regression)', () => {
     expect(isImageFile('a.pdf')).toBe(false);
+  });
+});
+
+describe('formatNumber', () => {
+  it('formats large numbers with en-US thousand separators', () => {
+    expect(formatNumber(1234567)).toBe('1,234,567');
+  });
+
+  it('formats zero', () => {
+    expect(formatNumber(0)).toBe('0');
+  });
+});
+
+describe('formatDate', () => {
+  it('contains the year for a known input', () => {
+    expect(formatDate('2026-06-05T14:30:00.000Z')).toContain('2026');
+  });
+
+  it('contains the month abbreviation for a known input', () => {
+    expect(formatDate('2026-06-05T14:30:00.000Z')).toContain('Jun');
   });
 });

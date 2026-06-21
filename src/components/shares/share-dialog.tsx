@@ -17,6 +17,7 @@ import {
   useRevokeShareLink,
   type ShareLinkResponse,
 } from "@/lib/queries/share-links";
+import { formatDate } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -108,7 +109,7 @@ export function ShareDialog({ open, onOpenChange, connectionId, bucket, fileKey 
                     }`}>{s.status}</span>
                     {s.expiresAt && (
                       <span className="text-xs text-muted-foreground">
-                        expires {new Date(s.expiresAt).toLocaleDateString()}
+                        expires {formatDate(s.expiresAt)}
                       </span>
                     )}
                   </div>

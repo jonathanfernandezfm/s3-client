@@ -84,7 +84,7 @@ export function OverviewActivityCard({
                     <span className="font-mono text-xs truncate">
                       {eventTarget(event)}
                     </span>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground" title={new Date(event.createdAt).toISOString()}>
                       {formatRelativeTime(event.createdAt)}
                     </div>
                   </div>
