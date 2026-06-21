@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://s3dock.app"),
   title: "S3 Dock",
   description: "A modern web UI for managing S3-compatible storage",
 };
