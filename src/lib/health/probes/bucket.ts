@@ -13,6 +13,7 @@ import {
   PutObjectCommand,
   PutObjectTaggingCommand,
 } from "@aws-sdk/client-s3";
+import { buildCopySource } from "@/lib/s3/copy-source";
 import { classifyError } from "../classify";
 import type { Probe, ProbeRunOutcome } from "../probe";
 
@@ -114,7 +115,7 @@ const copyObject: Probe = {
         new CopyObjectCommand({
           Bucket: bucket,
           Key: `${DEST_KEY_PREFIX}${suffix}`,
-          CopySource: `${bucket}/${SOURCE_KEY_PREFIX}${suffix}`,
+          CopySource: buildCopySource(bucket!, `${SOURCE_KEY_PREFIX}${suffix}`),
         }),
       );
       return { result: "granted", durationMs: elapsed(start) };

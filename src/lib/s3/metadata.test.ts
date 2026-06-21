@@ -33,7 +33,7 @@ describe("buildMetadataCopyParams", () => {
 
     expect(params.Bucket).toBe("my-bucket");
     expect(params.Key).toBe("docs/file.txt");
-    expect(params.CopySource).toBe(encodeURIComponent("my-bucket/docs/file.txt"));
+    expect(params.CopySource).toBe("my-bucket/docs%2Ffile.txt");
     expect(params.MetadataDirective).toBe("REPLACE");
     expect(params.ContentType).toBe("application/json");
     expect(params.CacheControl).toBe("public, max-age=3600");

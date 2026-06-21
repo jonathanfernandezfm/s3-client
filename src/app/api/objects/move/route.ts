@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
+import { buildCopySource } from "@/lib/s3/copy-source";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import { canManageFiles } from "@/lib/roles";
@@ -239,7 +240,7 @@ async function moveSingleObject(
       const command = new CopyObjectCommand({
         Bucket: targetBucket,
         Key: targetKey,
-        CopySource: encodeURIComponent(`${sourceBucket}/${sourceKey}`),
+        CopySource: buildCopySource(sourceBucket, sourceKey),
       });
       await targetClient.send(command);
     } else {
@@ -319,7 +320,7 @@ async function moveFolder(
             const command = new CopyObjectCommand({
               Bucket: targetBucket,
               Key: targetKey,
-              CopySource: encodeURIComponent(`${sourceBucket}/${obj.Key}`),
+              CopySource: buildCopySource(sourceBucket, obj.Key),
             });
             await targetClient.send(command);
           } else {

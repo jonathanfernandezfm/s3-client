@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CopyObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
+import { buildCopySource } from "@/lib/s3/copy-source";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import { canManageFiles } from "@/lib/roles";
@@ -40,7 +41,7 @@ export const POST = withAuth(async (req, { user }) => {
       new CopyObjectCommand({
         Bucket: bucket,
         Key: key,
-        CopySource: `${bucket}/${encodeURIComponent(key)}?versionId=${encodeURIComponent(versionId)}`,
+        CopySource: buildCopySource(bucket, key, versionId),
       }),
     );
 

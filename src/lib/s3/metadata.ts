@@ -2,6 +2,7 @@ import type {
   CopyObjectCommandInput,
   HeadObjectCommandOutput,
 } from "@aws-sdk/client-s3";
+import { buildCopySource } from "./copy-source";
 
 export interface MetadataEdits {
   contentType: string;
@@ -64,7 +65,7 @@ export function buildMetadataCopyParams(
   return {
     Bucket: bucket,
     Key: key,
-    CopySource: encodeURIComponent(`${bucket}/${key}`),
+    CopySource: buildCopySource(bucket, key),
     MetadataDirective: "REPLACE",
     Metadata: metadata,
     StorageClass: storageClass as CopyObjectCommandInput["StorageClass"],
