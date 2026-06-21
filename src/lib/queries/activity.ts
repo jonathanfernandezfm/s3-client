@@ -80,5 +80,12 @@ export function useActivity(scope: ActivityScope) {
 
 export function useInvalidateActivity() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+  return (scope?: { connectionId: string; bucket: string }) => {
+    if (scope) {
+      return queryClient.invalidateQueries({
+        queryKey: [...queryKeys.activity.all, scope.connectionId, scope.bucket],
+      });
+    }
+    return queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+  };
 }

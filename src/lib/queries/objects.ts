@@ -134,9 +134,11 @@ export function useDeleteObjects(connectionId: string, bucket: string) {
   return useMutation({
     mutationFn: (keys: string[]) => deleteObjects(connectionId, bucket, keys),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
-      invalidateActivity();
-      invalidateNotes();
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, connectionId, bucket],
+      });
+      invalidateActivity({ connectionId, bucket });
+      invalidateNotes({ connectionId, bucket });
       track({ name: "files_deleted", props: { count: variables.length } });
     },
   });
@@ -149,8 +151,10 @@ export function useCreateFolder(connectionId: string, bucket: string) {
   return useMutation({
     mutationFn: (path: string) => createFolder(connectionId, bucket, path),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
-      invalidateActivity();
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, connectionId, bucket],
+      });
+      invalidateActivity({ connectionId, bucket });
       track({ name: "folder_created" });
     },
   });
@@ -194,9 +198,20 @@ export function useCopyObjects() {
   return useMutation({
     mutationFn: copyObjects,
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
-      invalidateActivity();
-      invalidateNotes();
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, variables.sourceConnectionId, variables.sourceBucket],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, variables.targetConnectionId, variables.targetBucket],
+      });
+      invalidateActivity({ connectionId: variables.sourceConnectionId, bucket: variables.sourceBucket });
+      if (
+        variables.sourceConnectionId !== variables.targetConnectionId ||
+        variables.sourceBucket !== variables.targetBucket
+      ) {
+        invalidateActivity({ connectionId: variables.targetConnectionId, bucket: variables.targetBucket });
+      }
+      invalidateNotes({ connectionId: variables.targetConnectionId, bucket: variables.targetBucket });
       track({
         name: "files_copied",
         props: {
@@ -216,9 +231,26 @@ export function useMoveObjects() {
   return useMutation({
     mutationFn: moveObjects,
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
-      invalidateActivity();
-      invalidateNotes();
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, variables.sourceConnectionId, variables.sourceBucket],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, variables.targetConnectionId, variables.targetBucket],
+      });
+      invalidateActivity({ connectionId: variables.sourceConnectionId, bucket: variables.sourceBucket });
+      if (
+        variables.sourceConnectionId !== variables.targetConnectionId ||
+        variables.sourceBucket !== variables.targetBucket
+      ) {
+        invalidateActivity({ connectionId: variables.targetConnectionId, bucket: variables.targetBucket });
+      }
+      invalidateNotes({ connectionId: variables.sourceConnectionId, bucket: variables.sourceBucket });
+      if (
+        variables.sourceConnectionId !== variables.targetConnectionId ||
+        variables.sourceBucket !== variables.targetBucket
+      ) {
+        invalidateNotes({ connectionId: variables.targetConnectionId, bucket: variables.targetBucket });
+      }
       track({
         name: "files_moved",
         props: {
@@ -294,10 +326,14 @@ export function useUpdateObjectMetadata() {
 
   return useMutation({
     mutationFn: updateObjectMetadata,
-    onSuccess: () => {
-      // objects.all covers both the list and detail keys.
-      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
-      invalidateActivity();
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.objects.all, variables.connectionId, variables.bucket],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.objects.detail(variables.connectionId, variables.bucket, variables.key),
+      });
+      invalidateActivity({ connectionId: variables.connectionId, bucket: variables.bucket });
     },
   });
 }

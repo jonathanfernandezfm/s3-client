@@ -157,5 +157,12 @@ export function useDeleteNote() {
 
 export function useInvalidateNotes() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+  return (scope?: { connectionId: string; bucket: string }) => {
+    if (scope) {
+      return qc.invalidateQueries({
+        queryKey: [...queryKeys.notes.all, "counts", scope.connectionId, scope.bucket],
+      });
+    }
+    return qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+  };
 }
