@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useConnections,
   useDeleteConnection,
@@ -45,6 +46,7 @@ interface ConnectionListProps {
 }
 
 export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps) {
+  const router = useRouter();
   const { data: connections = [], isLoading } = useConnections();
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useWorkspaces();
@@ -185,7 +187,8 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                   <Card
                     key={connection.id}
                     id={`connection-${connection.id}`}
-                    className="p-3"
+                    className="p-3 cursor-pointer transition-colors hover:bg-accent/50"
+                    onClick={() => router.push(`/app/connections/${connection.id}?tab=overview`)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -197,7 +200,7 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                           {connection.role}
                         </span>
                       </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"

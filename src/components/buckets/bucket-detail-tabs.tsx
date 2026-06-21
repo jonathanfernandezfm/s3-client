@@ -6,6 +6,7 @@ import { ArrowLeft, BarChart3, Database, Lock, RefreshCw, Repeat } from "lucide-
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/lib/queries/connections";
 import { canManageFiles } from "@/lib/roles";
+import { resolveBucketTab, type BucketTabKey } from "./bucket-tab-key";
 import { ComingSoonTab } from "./coming-soon-tab";
 import { MultipartUploadsTab } from "./multipart-uploads-tab";
 import { OverviewTab } from "./overview-tab";
@@ -14,15 +15,9 @@ import { PermissionsTab } from "./permissions-tab";
 const TAB_DEFINITIONS = [
   { key: "overview", label: "Overview", icon: BarChart3 },
   { key: "multipart", label: "Incomplete uploads", icon: RefreshCw },
-  { key: "lifecycle", label: "Lifecycle rules", icon: Repeat },
+  { key: "lifecycle", label: "Lifecycle rules", icon: Repeat, badge: "Soon" },
   { key: "permissions", label: "Permissions", icon: Lock },
 ] as const;
-
-type TabKey = (typeof TAB_DEFINITIONS)[number]["key"];
-
-function isTabKey(value: string | null): value is TabKey {
-  return TAB_DEFINITIONS.some((t) => t.key === value);
-}
 
 interface BucketDetailTabsProps {
   connectionId: string;
@@ -33,13 +28,13 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const activeTab: TabKey = isTabKey(rawTab) ? rawTab : "overview";
+  const activeTab: BucketTabKey = resolveBucketTab(rawTab);
 
   const { data: connections = [] } = useConnections();
   const connection = connections.find((c) => c.id === connectionId);
   const canAbort = canManageFiles(connection?.role ?? null);
 
-  const setTab = (key: TabKey) => {
+  const setTab = (key: BucketTabKey) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", key);
     router.push(`/app/buckets/${connectionId}/${encodeURIComponent(bucket)}?${params.toString()}`);
@@ -65,22 +60,31 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
           )}
         </div>
         <nav className="flex items-center gap-1 -mb-px">
-          {TAB_DEFINITIONS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors",
-                key === activeTab
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
+          {TAB_DEFINITIONS.map((def) => {
+            const { key, label, icon: Icon } = def;
+            const badge = "badge" in def ? def.badge : undefined;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors",
+                  key === activeTab
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+                {badge && (
+                  <span className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </header>
 

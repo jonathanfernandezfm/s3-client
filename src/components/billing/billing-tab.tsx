@@ -36,9 +36,11 @@ function UsageMeter({
   formatValue: (n: number) => string;
 }) {
   const unlimited = limit === -1 || limit === 0;
-  const pct = unlimited ? 0 : Math.min(100, Math.round((current / limit) * 100));
+  const ratio = unlimited ? 0 : Math.min(1, current / Math.max(limit, 1));
+  const pct = ratio * 100;
+  const roundedPct = Math.round(pct);
   const barColor =
-    pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-blue-500";
+    roundedPct >= 100 ? "bg-red-500" : roundedPct >= 80 ? "bg-amber-500" : "bg-blue-500";
 
   return (
     <div className="space-y-1">
@@ -53,7 +55,7 @@ function UsageMeter({
       {!unlimited && (
         <div className="h-1.5 w-full rounded-full bg-muted">
           <div
-            className={`h-1.5 rounded-full transition-all ${barColor}`}
+            className={`h-1.5 rounded-full transition-all ${barColor} ${current > 0 ? "min-w-[2px]" : ""}`}
             style={{ width: `${pct}%` }}
           />
         </div>
