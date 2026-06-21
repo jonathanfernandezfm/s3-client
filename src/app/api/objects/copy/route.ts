@@ -11,7 +11,7 @@ import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import { canManageFiles } from "@/lib/roles";
 import { recordActivityBatch } from "@/lib/db/activity";
-import { indexUpsert } from "@/lib/search/index-ops";
+import { indexBulkUpsert } from "@/lib/search/index-ops";
 
 interface CopyRequest {
   sourceConnectionId: string;
@@ -149,18 +149,16 @@ export const POST = withAuth(async (req, { user }) => {
       }
     }
 
-    await Promise.all(
-      successfulResults.map((r) =>
-        indexUpsert({
-          workspaceId: targetAccess.workspaceId,
-          connectionId: targetConnectionId,
-          bucket: targetBucket,
-          key: r.targetKey,
-          size: 0n,
-          lastModified: new Date(),
-          etag: null,
-        })
-      )
+    await indexBulkUpsert(
+      successfulResults.map((r) => ({
+        workspaceId: targetAccess.workspaceId,
+        connectionId: targetConnectionId,
+        bucket: targetBucket,
+        key: r.targetKey,
+        size: 0n,
+        lastModified: new Date(),
+        etag: null,
+      }))
     );
 
     return NextResponse.json({

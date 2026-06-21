@@ -5,6 +5,8 @@ import { createS3Client } from "@/lib/s3/client";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 
+const PRESIGN_MAX_KEYS = 200;
+
 export const POST = withAuth(async (req, { user }) => {
   try {
     const {
@@ -21,7 +23,16 @@ export const POST = withAuth(async (req, { user }) => {
       );
     }
 
-    const cappedKeys = keys.slice(0, 200);
+    if (keys.length > PRESIGN_MAX_KEYS) {
+      return NextResponse.json(
+        {
+          error: `presign-batch accepts at most ${PRESIGN_MAX_KEYS} keys per request — split the request and retry.`,
+          limit: PRESIGN_MAX_KEYS,
+          received: keys.length,
+        },
+        { status: 400 }
+      );
+    }
 
     const access = await getConnectionAccessById(connectionId, user.id);
     if (!access) {
@@ -37,7 +48,7 @@ export const POST = withAuth(async (req, { user }) => {
     const errors: Record<string, string> = {};
 
     await Promise.all(
-      cappedKeys.map(async (key) => {
+      keys.map(async (key) => {
         try {
           const command = new GetObjectCommand({ Bucket: bucket, Key: key });
           urls[key] = await getSignedUrl(client, command, { expiresIn: 3600 });

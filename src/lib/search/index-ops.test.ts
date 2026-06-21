@@ -10,6 +10,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findMany: vi.fn(),
     },
     $transaction: vi.fn(),
+    $executeRaw: vi.fn(),
   },
 }));
 
@@ -25,6 +26,8 @@ import {
   indexRename,
   indexUpdateTags,
   indexTagsForKeys,
+  indexBulkDelete,
+  indexBulkUpsert,
 } from "./index-ops";
 
 beforeEach(() => {
@@ -199,5 +202,76 @@ describe("indexTagsForKeys", () => {
     expect(result).toEqual({});
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe("indexBulkDelete", () => {
+  test("short-circuits on empty keys array (does not call prisma)", async () => {
+    await indexBulkDelete({ connectionId: "c1", bucket: "b1", keys: [] });
+
+    expect(prisma.objectIndex.deleteMany).not.toHaveBeenCalled();
+  });
+
+  test("short-circuits when isSearchIndexEnabled returns false", async () => {
+    vi.mocked(isSearchIndexEnabled).mockReturnValue(false);
+
+    await indexBulkDelete({ connectionId: "c1", bucket: "b1", keys: ["file1.txt", "file2.txt"] });
+
+    expect(prisma.objectIndex.deleteMany).not.toHaveBeenCalled();
+  });
+
+  test("calls prisma.objectIndex.deleteMany once on happy path", async () => {
+    vi.mocked(prisma.objectIndex.deleteMany).mockResolvedValue({ count: 2 } as never);
+
+    await indexBulkDelete({ connectionId: "c1", bucket: "b1", keys: ["file1.txt", "file2.txt"] });
+
+    expect(prisma.objectIndex.deleteMany).toHaveBeenCalledOnce();
+    expect(prisma.objectIndex.deleteMany).toHaveBeenCalledWith({
+      where: {
+        connectionId: "c1",
+        bucket: "b1",
+        key: { in: ["file1.txt", "file2.txt"] },
+      },
+    });
+  });
+
+  test("swallows a prisma rejection (no exception propagates)", async () => {
+    vi.mocked(prisma.objectIndex.deleteMany).mockRejectedValueOnce(new Error("DB connection lost"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      indexBulkDelete({ connectionId: "c1", bucket: "b1", keys: ["file1.txt"] })
+    ).resolves.toBeUndefined();
+
+    spy.mockRestore();
+  });
+});
+
+describe("indexBulkUpsert", () => {
+  test("happy path produces exactly one $executeRaw call", async () => {
+    vi.mocked(prisma.$executeRaw).mockResolvedValue(2 as never);
+
+    await indexBulkUpsert([
+      {
+        workspaceId: "ws-1",
+        connectionId: "c1",
+        bucket: "b1",
+        key: "file1.txt",
+        size: 1024n,
+        lastModified: new Date("2024-01-01"),
+        etag: '"abc123"',
+      },
+      {
+        workspaceId: "ws-1",
+        connectionId: "c1",
+        bucket: "b1",
+        key: "file2.txt",
+        size: 2048n,
+        lastModified: new Date("2024-01-02"),
+        etag: null,
+      },
+    ]);
+
+    expect(prisma.$executeRaw).toHaveBeenCalledOnce();
   });
 });

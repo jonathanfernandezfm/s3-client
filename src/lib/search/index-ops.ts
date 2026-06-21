@@ -108,6 +108,30 @@ export async function indexDelete(input: {
   }
 }
 
+export async function indexBulkDelete(input: {
+  connectionId: string;
+  bucket: string;
+  keys: string[];
+}): Promise<void> {
+  if (!isSearchIndexEnabled()) return;
+  if (input.keys.length === 0) return;
+  try {
+    await prisma.objectIndex.deleteMany({
+      where: {
+        connectionId: input.connectionId,
+        bucket: input.bucket,
+        key: { in: input.keys },
+      },
+    });
+  } catch (err) {
+    logFailure(
+      "bulkDelete",
+      { connectionId: input.connectionId, bucket: input.bucket, count: input.keys.length },
+      err
+    );
+  }
+}
+
 export async function indexDeleteBucket(input: {
   connectionId: string;
   bucket: string;

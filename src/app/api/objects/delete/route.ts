@@ -6,7 +6,7 @@ import { withAuth } from "@/lib/auth";
 import { canManageFiles } from "@/lib/roles";
 import { recordActivityBatch } from "@/lib/db/activity";
 import prisma from "@/lib/db/prisma";
-import { indexDelete } from "@/lib/search/index-ops";
+import { indexBulkDelete } from "@/lib/search/index-ops";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -59,7 +59,7 @@ export const POST = withAuth(async (req, { user }) => {
       items: keys.map((k) => ({ key: k })),
     });
 
-    await Promise.all(keys.map((k) => indexDelete({ connectionId, bucket, key: k })));
+    await indexBulkDelete({ connectionId, bucket, keys });
 
     try {
       await prisma.fileNote.deleteMany({
