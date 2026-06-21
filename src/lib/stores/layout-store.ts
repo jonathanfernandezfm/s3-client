@@ -231,7 +231,9 @@ export const useLayoutStore = create<LayoutState>()(
         }));
 
         // Remove pane from panes record
-        const { [paneId]: removed, ...remainingPanes } = panes;
+        const remainingPanes = Object.fromEntries(
+          Object.entries(panes).filter(([id]) => id !== paneId)
+        ) as typeof panes;
 
         // Update focused pane if needed
         let newFocusedPaneId = focusedPaneId;
@@ -280,7 +282,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       removeTab: (paneId, tabId) => {
-        const { panes, grid } = get();
+        const { panes } = get();
         const pane = panes[paneId];
         if (!pane) return;
 

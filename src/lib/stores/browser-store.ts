@@ -86,8 +86,10 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
 
   removePaneState: (paneId) => {
     set((state) => {
-      const { [paneId]: removed, ...remaining } = state.paneStates;
-      return { paneStates: remaining };
+      const rest = Object.fromEntries(
+        Object.entries(state.paneStates).filter(([id]) => id !== paneId)
+      );
+      return { paneStates: rest };
     });
   },
 

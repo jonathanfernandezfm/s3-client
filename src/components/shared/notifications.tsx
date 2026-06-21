@@ -60,9 +60,6 @@ function NotificationItem({ notification }: { notification: Notification }) {
   useEffect(() => {
     if (!duration) return;
 
-    progressRef.current = 100;
-    setProgress(100);
-
     const tickMs = 50;
     const decrement = (tickMs / duration) * 100;
 

@@ -1,4 +1,4 @@
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 type Reason = "revoked" | "expired" | "exhausted" | "not-found";
 

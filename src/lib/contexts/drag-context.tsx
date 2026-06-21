@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, ReactNode, useMemo } from "react";
-import { useBrowserStore, DragState } from "@/lib/stores/browser-store";
+import { useBrowserStore } from "@/lib/stores/browser-store";
 import type { S3Object } from "@/types";
 
 interface DragContextValue {
