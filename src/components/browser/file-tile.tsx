@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2,
-  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal, Tag, Activity,
+  MoreVertical, Download, Trash2, Eye, Star, History, SlidersHorizontal, Tag, Activity, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import { CapabilityGate } from "@/components/health/capability-gate";
 import { TagChips } from "./tag-chips";
 import { TagEditorDialog } from "./tag-editor-dialog";
+import { RenameDialog } from "./rename-dialog";
 
 function FileTypeIcon({ filename, className }: { filename: string; className?: string }) {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -96,6 +97,7 @@ export function FileTile({
   const [broken, setBroken] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const { can } = useTier();
   const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
@@ -348,6 +350,12 @@ export function FileTile({
                   </span>
                 )}
               </DropdownMenuItem>
+              {canWrite && (
+                <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                  <Pencil className="h-4 w-4" />
+                  Rename…
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleOpenProperties}>
                 <SlidersHorizontal className="h-4 w-4" />
                 Properties
@@ -414,6 +422,15 @@ export function FileTile({
           bucket={bucket}
           objectKey={object.key}
           canWrite={canWrite}
+        />
+      )}
+      {renameOpen && (
+        <RenameDialog
+          open={renameOpen}
+          onClose={() => setRenameOpen(false)}
+          connectionId={connectionId}
+          bucket={bucket}
+          objectKey={object.key}
         />
       )}
     </div>

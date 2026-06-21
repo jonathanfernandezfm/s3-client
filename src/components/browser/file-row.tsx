@@ -28,6 +28,7 @@ import {
   History,
   SlidersHorizontal,
   Tag,
+  Pencil,
 } from "lucide-react";
 import { TagChips } from "./tag-chips";
 import { TagEditorDialog } from "./tag-editor-dialog";
@@ -36,6 +37,7 @@ import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialo
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { usePropertiesDrawerStore } from "@/lib/stores/properties-drawer-store";
 import { ShareDialog } from "@/components/shares/share-dialog";
+import { RenameDialog } from "./rename-dialog";
 import { formatBytes, formatDate, getFileExtension, isImageFile, cn } from "@/lib/utils";
 import { useFileItemBehavior } from "./use-file-item-behavior";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
@@ -122,6 +124,7 @@ export function FileRow({
 
   const [shareOpen, setShareOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const { can } = useTier();
   const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
@@ -318,6 +321,12 @@ export function FileRow({
                   )}
                 </DropdownMenuItem>
               )}
+              {!object.isFolder && canWrite && (
+                <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                  <Pencil className="h-4 w-4" />
+                  Rename…
+                </DropdownMenuItem>
+              )}
               {!object.isFolder && (
                 <DropdownMenuItem onClick={handleOpenProperties}>
                   <SlidersHorizontal className="h-4 w-4" />
@@ -392,6 +401,15 @@ export function FileRow({
           bucket={bucket}
           objectKey={object.key}
           canWrite={canWrite}
+        />
+      )}
+      {renameOpen && !object.isFolder && (
+        <RenameDialog
+          open={renameOpen}
+          onClose={() => setRenameOpen(false)}
+          connectionId={connectionId}
+          bucket={bucket}
+          objectKey={object.key}
         />
       )}
     </TableRow>
