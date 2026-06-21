@@ -10,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useShareLinks, useRevokeShareLink, type ShareLinkResponse } from "@/lib/queries/share-links";
+import { useShareLinks, useRevokeShareLink, useEditShareLink, type ShareLinkResponse } from "@/lib/queries/share-links";
 import { formatDate } from "@/lib/utils";
+import { canCopyShare, canExtendShare, canRevokeShare, EXTEND_BY_MS } from "@/lib/share-links/row-actions";
 
 const STATUS_CLASSES: Record<ShareLinkResponse["status"], string> = {
   active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -23,6 +24,7 @@ const STATUS_CLASSES: Record<ShareLinkResponse["status"], string> = {
 export function ShareListTable({ connectionId }: { connectionId: string }) {
   const { data, isLoading } = useShareLinks(connectionId);
   const revoke = useRevokeShareLink();
+  const edit = useEditShareLink();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopy = useCallback((id: string, text: string) => {
@@ -74,19 +76,37 @@ export function ShareListTable({ connectionId }: { connectionId: string }) {
               <TableCell className="text-muted-foreground text-xs">{s.createdByDisplayName}</TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-[72px] gap-1 text-xs"
-                    onClick={() => handleCopy(s.id, `${window.location.origin}/s/${s.slug}`)}
-                  >
-                    {copiedId === s.id ? (
-                      <><Check className="h-3 w-3 text-green-600" /><span className="text-green-600">Copied</span></>
-                    ) : (
-                      <><Copy className="h-3 w-3" />Copy</>
-                    )}
-                  </Button>
-                  {s.status === "active" && (
+                  {canCopyShare(s.status) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-[72px] gap-1 text-xs"
+                      onClick={() => handleCopy(s.id, `${window.location.origin}/s/${s.slug}`)}
+                    >
+                      {copiedId === s.id ? (
+                        <><Check className="h-3 w-3 text-green-600" /><span className="text-green-600">Copied</span></>
+                      ) : (
+                        <><Copy className="h-3 w-3" />Copy</>
+                      )}
+                    </Button>
+                  )}
+                  {canExtendShare(s.status) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={edit.isPending}
+                      onClick={() =>
+                        edit.mutate({
+                          id: s.id,
+                          patch: { expiresAt: new Date(Date.now() + EXTEND_BY_MS).toISOString() },
+                        })
+                      }
+                    >
+                      Extend
+                    </Button>
+                  )}
+                  {canRevokeShare(s.status) && (
                     <Button
                       variant="ghost"
                       size="sm"

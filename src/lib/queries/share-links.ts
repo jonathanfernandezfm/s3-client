@@ -107,3 +107,24 @@ export function useRevokeShareLink() {
     },
   });
 }
+
+export function useEditShareLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      id: string;
+      patch: { expiresAt?: string | null; maxUses?: number | null; description?: string | null };
+    }) => {
+      const r = await fetch(`/api/share-links/${args.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args.patch),
+      });
+      if (!r.ok) throw new Error("Failed to update share link");
+      return (await r.json()) as { shareLink: ShareLinkResponse };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.shareLinks.all });
+    },
+  });
+}
