@@ -454,3 +454,23 @@ model CrawlJob {
   @@index([status, lastTickAt])
   @@map("crawl_jobs")
 }
+
+enum WebhookSource {
+  STRIPE
+  CLERK
+}
+
+model WebhookEvent {
+  id        String        @id @default(uuid())
+  source    WebhookSource
+  // The provider-supplied event id (Stripe: event.id; Clerk: svix-id header).
+  eventId   String
+  // Best-effort metadata for incident debugging; nullable.
+  eventType String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([source, eventId])
+  @@index([source, createdAt(sort: Desc)])
+  @@map("webhook_events")
+}
