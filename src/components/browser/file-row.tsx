@@ -29,10 +29,15 @@ import {
   SlidersHorizontal,
   Tag,
   Pencil,
+  Copy,
+  Link as LinkIcon,
 } from "lucide-react";
 import { TagChips } from "./tag-chips";
 import { TagEditorDialog } from "./tag-editor-dialog";
 import { useBucketVersioning } from "@/lib/queries/buckets";
+import { useConnection } from "@/lib/queries/connections";
+import { toast } from "@/hooks/use-toast";
+import { s3Uri, objectHttpUrl } from "@/lib/s3/uri";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { usePropertiesDrawerStore } from "@/lib/stores/properties-drawer-store";
@@ -133,12 +138,20 @@ export function FileRow({
   const versioning = useBucketVersioning(connectionId, bucket);
   const hasVersioning = versioning.data?.status === "Enabled" || versioning.data?.status === "Suspended";
   const openVersionDialog = useVersionHistoryDialogStore((s) => s.open);
+  const connection = useConnection(connectionId);
+  const endpoint = connection.data?.endpoint;
+  const forcePathStyle = connection.data?.forcePathStyle;
   const setInfoScope = useInfoDrawerStore((s) => s.setScope);
   const openInfoDrawer = useInfoDrawerStore((s) => s.open);
   const openPropertiesDrawer = usePropertiesDrawerStore((s) => s.open);
 
   const handleOpenProperties = () => {
     openPropertiesDrawer({ connectionId, bucket, objectKey: object.key });
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copied` });
   };
 
   const handleOpenActivity = () => {
@@ -331,6 +344,24 @@ export function FileRow({
                 <DropdownMenuItem onClick={handleOpenProperties}>
                   <SlidersHorizontal className="h-4 w-4" />
                   Properties
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => copyToClipboard(object.key, "Key")}>
+                <Copy className="h-4 w-4" />
+                Copy key
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => copyToClipboard(s3Uri(bucket, object.key), "S3 URI")}>
+                <Copy className="h-4 w-4" />
+                Copy S3 URI
+              </DropdownMenuItem>
+              {endpoint && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    copyToClipboard(objectHttpUrl(endpoint, bucket, object.key, forcePathStyle ?? true), "URL")
+                  }
+                >
+                  <LinkIcon className="h-4 w-4" />
+                  Copy URL
                 </DropdownMenuItem>
               )}
               {!object.isFolder && (

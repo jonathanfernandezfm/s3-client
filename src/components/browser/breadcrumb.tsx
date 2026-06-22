@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Home, MoreHorizontal, Settings, Star } from "lucide-react";
+import { ChevronRight, Copy, Home, MoreHorizontal, Settings, Star } from "lucide-react";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
+import { toast } from "@/hooks/use-toast";
+import { s3Uri } from "@/lib/s3/uri";
 
 interface BreadcrumbProps {
   connectionId: string;
@@ -82,6 +84,14 @@ export function Breadcrumb({
     ? findBookmark(prefixBookmarks, connectionId, bucket, currentPrefix)
     : null;
   const folderPinned = !!pinnedFolder;
+
+  const handleCopyPath = () => {
+    const uriToCopy = currentPrefix
+      ? s3Uri(bucket, currentPrefix)
+      : s3Uri(bucket, "");
+    navigator.clipboard.writeText(uriToCopy);
+    toast({ title: "S3 URI copied" });
+  };
 
   return (
     <div className="flex items-center gap-1.5 min-w-0">
@@ -184,6 +194,13 @@ export function Breadcrumb({
         <Star className="size-3.5" fill={folderPinned ? "currentColor" : "none"} />
       </button>
     )}
+    <button
+      onClick={handleCopyPath}
+      className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground/50 hover:text-muted-foreground"
+      title="Copy S3 URI"
+    >
+      <Copy className="size-3.5" />
+    </button>
     </div>
   );
 }
