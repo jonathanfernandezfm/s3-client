@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { usePropertiesDrawerStore } from "@/lib/stores/properties-drawer-store";
-import { useObjectHead, useUpdateObjectMetadata } from "@/lib/queries/objects";
+import { useObjectHead, useUpdateObjectMetadata, useRestoreObject } from "@/lib/queries/objects";
 import { useConnections } from "@/lib/queries/connections";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { canManageFiles } from "@/lib/roles";
@@ -172,6 +172,7 @@ function PropertiesForm({
 }) {
   const { toast } = useToast();
   const updateMetadata = useUpdateObjectMetadata();
+  const restore = useRestoreObject();
   const versioning = useBucketVersioning(connectionId, bucket);
   const versioningEnabled = versioning.data?.status === "Enabled";
 
@@ -191,6 +192,8 @@ function PropertiesForm({
 
   const restored =
     properties.restore?.includes('ongoing-request="false"') ?? false;
+  const restoreInProgress =
+    properties.restore?.includes('ongoing-request="true"') ?? false;
   const archived =
     (properties.storageClass === "GLACIER" ||
       properties.storageClass === "DEEP_ARCHIVE") &&
@@ -400,7 +403,42 @@ function PropertiesForm({
         </div>
 
         {blockedReason && (
-          <p className="text-muted-foreground">{blockedReason}</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-muted-foreground">{blockedReason}</p>
+            {archived && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canWrite || restoreInProgress || restore.isPending}
+                onClick={async () => {
+                  try {
+                    const res = await restore.mutateAsync({
+                      connectionId,
+                      bucket,
+                      key: objectKey,
+                    });
+                    toast({
+                      title:
+                        res.status === "in-progress"
+                          ? "Restore already in progress"
+                          : "Restore initiated",
+                      description:
+                        "Archived objects take minutes to hours to become available. Re-open this panel to check status.",
+                    });
+                  } catch (err) {
+                    toast({
+                      title: "Couldn't start restore",
+                      description:
+                        err instanceof Error ? err.message : "Unknown error",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {restoreInProgress ? "Restoring…" : "Restore"}
+              </Button>
+            )}
+          </div>
         )}
         {editable && versioningEnabled && (
           <p className="text-muted-foreground">
