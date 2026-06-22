@@ -91,7 +91,7 @@ export const POST = withAuth(async (req, { user }) => {
 
     await client.send(new CopyObjectCommand(params));
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName:
@@ -101,6 +101,9 @@ export const POST = withAuth(async (req, { user }) => {
       bucket,
       key,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] metadata-route lost audit row", { connectionId, bucket, key, reason: activityResult.reason });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

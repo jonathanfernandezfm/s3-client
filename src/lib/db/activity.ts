@@ -18,7 +18,9 @@ type BatchActivityInput = Omit<SingleActivityInput, "key" | "targetKey"> & {
   batchId?: string;
 };
 
-export async function recordActivity(input: SingleActivityInput): Promise<void> {
+export type ActivityResult = { ok: true } | { ok: false; reason: string };
+
+export async function recordActivity(input: SingleActivityInput): Promise<ActivityResult> {
   try {
     await prisma.activityEvent.create({
       data: {
@@ -34,14 +36,24 @@ export async function recordActivity(input: SingleActivityInput): Promise<void> 
         batchId: null,
       },
     });
+    return { ok: true };
   } catch (err) {
-    console.error("[activity] recordActivity failed:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[activity] recordActivity failed", {
+      connectionId: input.connectionId,
+      action: input.action,
+      bucket: input.bucket,
+      key: input.key,
+      userId: input.userId,
+      reason,
+    });
+    return { ok: false, reason };
   }
 }
 
 export async function recordActivityWithBatch(
   input: SingleActivityInput & { batchId?: string | null }
-): Promise<void> {
+): Promise<ActivityResult> {
   try {
     await prisma.activityEvent.create({
       data: {
@@ -57,12 +69,22 @@ export async function recordActivityWithBatch(
         batchId: input.batchId ?? null,
       },
     });
+    return { ok: true };
   } catch (err) {
-    console.error("[activity] recordActivityWithBatch failed:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[activity] recordActivityWithBatch failed", {
+      connectionId: input.connectionId,
+      action: input.action,
+      bucket: input.bucket,
+      key: input.key,
+      userId: input.userId,
+      reason,
+    });
+    return { ok: false, reason };
   }
 }
 
-export async function recordActivityBatch(input: BatchActivityInput): Promise<void> {
+export async function recordActivityBatch(input: BatchActivityInput): Promise<ActivityResult> {
   try {
     const batchId = input.batchId ?? crypto.randomUUID();
     await prisma.activityEvent.createMany({
@@ -79,7 +101,16 @@ export async function recordActivityBatch(input: BatchActivityInput): Promise<vo
         batchId,
       })),
     });
+    return { ok: true };
   } catch (err) {
-    console.error("[activity] recordActivityBatch failed:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[activity] recordActivityBatch failed", {
+      connectionId: input.connectionId,
+      action: input.action,
+      bucket: input.bucket,
+      userId: input.userId,
+      reason,
+    });
+    return { ok: false, reason };
   }
 }

@@ -89,7 +89,7 @@ export const POST = withAuth(async (req, { user }) => {
     );
     const size = BigInt(head.ContentLength ?? 0);
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName:
@@ -100,6 +100,9 @@ export const POST = withAuth(async (req, { user }) => {
       key,
       byteSize: size,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] multipart-complete-route lost audit row", { connectionId, bucket, key, reason: activityResult.reason });
+    }
 
     await indexUpsert({
       workspaceId: access.workspaceId,

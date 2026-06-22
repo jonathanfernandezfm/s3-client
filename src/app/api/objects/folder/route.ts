@@ -53,7 +53,7 @@ export const POST = withAuth(async (req, { user }) => {
     await client.send(command);
 
     const folderKey = path.endsWith("/") ? path : path + "/";
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -62,6 +62,9 @@ export const POST = withAuth(async (req, { user }) => {
       bucket,
       key: folderKey,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] folder-route lost audit row", { connectionId, bucket, key: folderKey, reason: activityResult.reason });
+    }
 
     await indexUpsert({
       workspaceId: access.workspaceId,

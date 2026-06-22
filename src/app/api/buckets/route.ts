@@ -96,7 +96,7 @@ export const PUT = withAuth(async (req, { user }) => {
       "granted",
     );
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -104,6 +104,9 @@ export const PUT = withAuth(async (req, { user }) => {
       action: "BUCKET_CREATE",
       bucket: name,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] buckets-create-route lost audit row", { connectionId, bucket: name, reason: activityResult.reason });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

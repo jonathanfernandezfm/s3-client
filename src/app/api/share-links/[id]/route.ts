@@ -121,7 +121,7 @@ export const DELETE = withAuth<RouteContext>(async (_req, { user, params }) => {
   }
 
   const revoked = await revokeShareLink(id);
-  await recordActivity({
+  const activityResult = await recordActivity({
     connectionId: linkBase.link.connectionId,
     userId: user.id,
     userDisplayName: displayName(user),
@@ -130,6 +130,9 @@ export const DELETE = withAuth<RouteContext>(async (_req, { user, params }) => {
     bucket: linkBase.link.bucket,
     key: linkBase.link.key,
   });
+  if (!activityResult.ok) {
+    console.error("[activity] share-link-revoke-route lost audit row", { connectionId: linkBase.link.connectionId, reason: activityResult.reason });
+  }
 
   return NextResponse.json({ revokedAt: revoked.revokedAt?.toISOString() ?? null });
 });

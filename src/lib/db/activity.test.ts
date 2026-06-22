@@ -52,6 +52,27 @@ describe("recordActivity", () => {
     });
   });
 
+  test("returns { ok: true } on success", async () => {
+    (prisma.activityEvent.create as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    const result = await recordActivity({ ...baseInput, key: "file.txt" });
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("returns { ok: false, reason } and does not throw when prisma errors", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    (prisma.activityEvent.create as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("DB connection lost")
+    );
+
+    const result = await recordActivity({ ...baseInput, key: "file.txt" });
+
+    expect(result).toMatchObject({ ok: false, reason: "DB connection lost" });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
   test("swallows errors and logs them without throwing", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     (prisma.activityEvent.create as ReturnType<typeof vi.fn>).mockRejectedValue(
@@ -60,7 +81,7 @@ describe("recordActivity", () => {
 
     await expect(
       recordActivity({ ...baseInput, key: "file.txt" })
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ ok: false });
 
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
@@ -93,6 +114,35 @@ describe("recordActivityBatch", () => {
     expect(data[1].key).toBe("b.txt");
     expect(data[0].batchId).toBe(mockUUID);
     expect(data[1].batchId).toBe(mockUUID);
+  });
+
+  test("returns { ok: true } on success", async () => {
+    (prisma.activityEvent.createMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
+
+    const result = await recordActivityBatch({
+      ...baseInput,
+      action: "DELETE",
+      items: [{ key: "file.txt" }],
+    });
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("returns { ok: false, reason } and does not throw when prisma errors", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    (prisma.activityEvent.createMany as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("timeout")
+    );
+
+    const result = await recordActivityBatch({
+      ...baseInput,
+      action: "DELETE",
+      items: [{ key: "file.txt" }],
+    });
+
+    expect(result).toMatchObject({ ok: false, reason: "timeout" });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   test("all rows share the same batchId", async () => {
@@ -135,7 +185,7 @@ describe("recordActivityBatch", () => {
         action: "DELETE",
         items: [{ key: "file.txt" }],
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ ok: false });
 
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
