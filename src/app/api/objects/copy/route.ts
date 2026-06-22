@@ -9,21 +9,12 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
 import { buildCopySource } from "@/lib/s3/copy-source";
 import { buildFidelityParams, type SourceTag } from "@/lib/s3/copy-fidelity";
-import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
-import { canManageFiles } from "@/lib/roles";
+import { requireConnectionAccess } from "@/lib/auth/require-connection-access";
 import { meterOperation } from "@/lib/subscriptions";
 import { recordActivityBatch } from "@/lib/db/activity";
 import { indexBulkUpsert } from "@/lib/search/index-ops";
-
-interface CopyRequest {
-  sourceConnectionId: string;
-  sourceBucket: string;
-  sourceKeys: string[];
-  targetConnectionId: string;
-  targetBucket: string;
-  targetPath: string;
-}
+import { CopyObjectsRequest } from "@/lib/schemas/objects";
 
 interface CopyResult {
   sourceKey: string;
@@ -34,6 +25,13 @@ interface CopyResult {
 
 export const POST = withAuth(async (req, { user }) => {
   try {
+    const parsed = CopyObjectsRequest.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+        { status: 400 }
+      );
+    }
     const {
       sourceConnectionId,
       sourceBucket,
@@ -41,48 +39,35 @@ export const POST = withAuth(async (req, { user }) => {
       targetConnectionId,
       targetBucket,
       targetPath,
-    }: CopyRequest = await req.json();
-
-    // Validate required fields
-    if (
-      !sourceConnectionId ||
-      !sourceBucket ||
-      !sourceKeys ||
-      sourceKeys.length === 0 ||
-      !targetConnectionId ||
-      !targetBucket
-    ) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Get connections and enforce permissions.
-    const sourceAccess = await getConnectionAccessById(sourceConnectionId, user.id);
-    const targetAccess = await getConnectionAccessById(targetConnectionId, user.id);
-
-    if (!sourceAccess) {
-      return NextResponse.json(
-        { error: "Source connection not found" },
-        { status: 404 }
-      );
-    }
-
-    if (!targetAccess) {
-      return NextResponse.json(
-        { error: "Target connection not found" },
-        { status: 404 }
-      );
-    }
-
     // Copy reads from source and writes to target, so only the target requires write access.
-    if (!canManageFiles(targetAccess.role)) {
-      return NextResponse.json(
-        { error: "You do not have permission to write to the target connection" },
-        { status: 403 }
-      );
+    const sourceResult = await requireConnectionAccess(sourceConnectionId, user.id, "read");
+    if (sourceResult instanceof NextResponse) {
+      // Preserve the existing "Source connection not found" phrasing
+      return sourceResult.status === 404
+        ? NextResponse.json({ error: "Source connection not found" }, { status: 404 })
+        : sourceResult;
     }
+
+    const targetResult = await requireConnectionAccess(targetConnectionId, user.id, "write");
+    if (targetResult instanceof NextResponse) {
+      // Distinguish target's 404 and preserve target write-denied phrasing
+      if (targetResult.status === 404) {
+        return NextResponse.json({ error: "Target connection not found" }, { status: 404 });
+      }
+      if (targetResult.status === 403) {
+        return NextResponse.json(
+          { error: "You do not have permission to write to the target connection" },
+          { status: 403 }
+        );
+      }
+      return targetResult;
+    }
+
+    const { access: sourceAccess } = sourceResult;
+    const { access: targetAccess } = targetResult;
 
     const tier = user.subscription?.tier ?? "FREE";
     const meter = await meterOperation(user.id, tier);
