@@ -301,3 +301,36 @@ export function useUpdateObjectMetadata() {
     },
   });
 }
+
+interface RestoreParams {
+  connectionId: string;
+  bucket: string;
+  key: string;
+  days?: number;
+  tier?: "Standard" | "Bulk" | "Expedited";
+}
+
+async function restoreObject(
+  params: RestoreParams
+): Promise<{ status: string; message?: string }> {
+  const response = await fetch("/api/objects/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to restore object");
+  }
+  return response.json();
+}
+
+export function useRestoreObject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: restoreObject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.objects.all });
+    },
+  });
+}
