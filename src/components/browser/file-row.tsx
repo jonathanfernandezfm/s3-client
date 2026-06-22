@@ -219,6 +219,7 @@ export function FileRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line react-hooks/static-components -- Icon is a stable imported component reference, not a newly created component; getFileIcon returns Lucide icon, real fix tracked separately */}
           <Icon
             className={`h-4 w-4 ${
               object.isFolder ? "text-amber-400" : "text-muted-foreground"

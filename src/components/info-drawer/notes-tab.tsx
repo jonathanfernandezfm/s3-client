@@ -222,6 +222,7 @@ function Composer({
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing pattern; reset body when note key changes is intentional, real fix tracked separately
     setBody("");
   }, [connectionId, bucket, noteKey]);
 

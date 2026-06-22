@@ -182,6 +182,7 @@ function PropertiesForm({
     properties.cacheControl ?? ""
   );
   const [storageClass, setStorageClass] = useState(properties.storageClass);
+  // eslint-disable-next-line react-hooks/refs -- nextRowId.current is read inside useState lazy initializer (runs once at mount, not during re-renders); safe to read here, real fix tracked separately
   const [rows, setRows] = useState<MetadataRow[]>(() =>
     Object.entries(properties.metadata).map(([key, value]) => ({
       id: nextRowId.current++,

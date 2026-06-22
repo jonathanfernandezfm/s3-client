@@ -577,7 +577,7 @@ export function ImportAwsProfileDialog({
           <DialogHeader>
             <DialogTitle>Validating {state.count} profile{state.count === 1 ? "" : "s"}…</DialogTitle>
             <DialogDescription>
-              Testing each profile's credentials against AWS S3. This may take a few seconds.
+              Testing each profile&apos;s credentials against AWS S3. This may take a few seconds.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center py-6">

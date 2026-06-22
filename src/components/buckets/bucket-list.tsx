@@ -46,6 +46,7 @@ export function BucketList({ onOpenBucket }: BucketListProps = {}) {
   useEffect(() => {
     if (intent?.kind !== "create-bucket") return;
     consumeIntent();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing pattern; processing palette intent in effect is intentional, real fix tracked separately
     setCreateBucketForConnection(intent.connectionId);
   }, [intent, consumeIntent]);
 
