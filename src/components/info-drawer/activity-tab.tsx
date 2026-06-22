@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { notify } from "@/lib/stores/notification-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { useActivity } from "@/lib/queries/activity";
 import { groupActivityEvents } from "@/components/activity/batch-grouping";
@@ -169,18 +170,45 @@ function ActivityRowItem({ row }: { row: ActivityRow }) {
   return <BatchRowItem row={row} />;
 }
 
+async function downloadActivityCsv(scope: {
+  connectionId: string; bucket: string; prefix?: string; key?: string;
+  userId?: string; actions?: string[];
+}) {
+  const params = new URLSearchParams({ connectionId: scope.connectionId, bucket: scope.bucket });
+  if (scope.prefix) params.set("prefix", scope.prefix);
+  if (scope.key) params.set("key", scope.key);
+  if (scope.userId) params.set("userId", scope.userId);
+  if (scope.actions?.length) params.set("actions", scope.actions.join(","));
+  const res = await fetch(`/api/activity/export?${params.toString()}`);
+  if (!res.ok) { notify("error", "Export failed", "Couldn't export activity."); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ?? "activity.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  if (res.headers.get("X-Export-Truncated") === "true") {
+    notify("info", "Export truncated", "Only the most recent 50,000 events were exported.");
+  }
+}
+
 function FilterStrip({
   events,
   userFilter,
   actionFilter,
   setUserFilter,
   setActionFilter,
+  scope,
+  hasScope,
 }: {
   events: ActivityEventResponse[];
   userFilter: string | null;
   actionFilter: ActivityAction[] | null;
   setUserFilter: (v: string | null) => void;
   setActionFilter: (v: ActivityAction[] | null) => void;
+  scope: { connectionId: string; bucket: string; prefix?: string; key?: string; userId?: string; actions?: string[] };
+  hasScope: boolean;
 }) {
   const userMap = new Map<string, string>();
   for (const e of events) {
@@ -214,6 +242,17 @@ function FilterStrip({
             <option key={uid} value={uid}>{name}</option>
           ))}
         </select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs shrink-0"
+          disabled={!hasScope}
+          onClick={() => downloadActivityCsv(scope)}
+          title="Export activity to CSV"
+        >
+          <Download className="h-3.5 w-3.5 mr-1" />
+          CSV
+        </Button>
       </div>
       <div>
         <div className="text-xs text-muted-foreground mb-1.5">Actions</div>
@@ -284,6 +323,8 @@ export function ActivityTab() {
         actionFilter={actionFilter}
         setUserFilter={setUserFilter}
         setActionFilter={setActionFilter}
+        scope={scope}
+        hasScope={hasScope}
       />
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
