@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import {
   CopyObjectCommand,
   GetObjectCommand,
+  GetObjectTaggingCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
 import { buildCopySource } from "@/lib/s3/copy-source";
+import { buildFidelityParams, type SourceTag } from "@/lib/s3/copy-fidelity";
 import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
 import { canManageFiles } from "@/lib/roles";
@@ -212,13 +214,24 @@ async function copySingleObject(
         throw new Error("Empty response body");
       }
 
+      let tags: SourceTag[] = [];
+      try {
+        const tagging = await sourceClient.send(
+          new GetObjectTaggingCommand({ Bucket: sourceBucket, Key: sourceKey })
+        );
+        tags = (tagging.TagSet ?? []).map((t) => ({ key: t.Key ?? "", value: t.Value ?? "" }));
+      } catch {
+        // Source may not grant s3:GetObjectTagging; proceed without tags.
+      }
+
+      const fidelity = buildFidelityParams(response, tags);
       const upload = new Upload({
         client: targetClient,
         params: {
           Bucket: targetBucket,
           Key: targetKey,
           Body: response.Body,
-          ContentType: response.ContentType,
+          ...fidelity,
         },
       });
 
@@ -287,13 +300,24 @@ async function copyFolder(
             const response = await sourceClient.send(getCommand);
 
             if (response.Body) {
+              let tags: SourceTag[] = [];
+              try {
+                const tagging = await sourceClient.send(
+                  new GetObjectTaggingCommand({ Bucket: sourceBucket, Key: obj.Key })
+                );
+                tags = (tagging.TagSet ?? []).map((t) => ({ key: t.Key ?? "", value: t.Value ?? "" }));
+              } catch {
+                // Source may not grant s3:GetObjectTagging; proceed without tags.
+              }
+
+              const fidelity = buildFidelityParams(response, tags);
               const upload = new Upload({
                 client: targetClient,
                 params: {
                   Bucket: targetBucket,
                   Key: targetKey,
                   Body: response.Body,
-                  ContentType: response.ContentType,
+                  ...fidelity,
                 },
               });
               await upload.done();
