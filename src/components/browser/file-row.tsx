@@ -36,7 +36,7 @@ import { TagChips } from "./tag-chips";
 import { TagEditorDialog } from "./tag-editor-dialog";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { useConnection } from "@/lib/queries/connections";
-import { toast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import { s3Uri, objectHttpUrl } from "@/lib/s3/uri";
 import { useVersionHistoryDialogStore } from "@/lib/stores/version-history-dialog-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
@@ -144,6 +144,7 @@ export function FileRow({
   const setInfoScope = useInfoDrawerStore((s) => s.setScope);
   const openInfoDrawer = useInfoDrawerStore((s) => s.open);
   const openPropertiesDrawer = usePropertiesDrawerStore((s) => s.open);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const handleOpenProperties = () => {
     openPropertiesDrawer({ connectionId, bucket, objectKey: object.key });
@@ -151,7 +152,7 @@ export function FileRow({
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: `${label} copied` });
+    addNotification({ type: "info", title: `${label} copied`, status: "completed" });
   };
 
   const handleOpenActivity = () => {

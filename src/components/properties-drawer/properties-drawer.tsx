@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Plus, X, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import { usePropertiesDrawerStore } from "@/lib/stores/properties-drawer-store";
 import { useObjectHead, useUpdateObjectMetadata, useRestoreObject } from "@/lib/queries/objects";
 import { useConnections } from "@/lib/queries/connections";
@@ -170,7 +170,7 @@ function PropertiesForm({
   properties: ObjectProperties;
   canWrite: boolean;
 }) {
-  const { toast } = useToast();
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const updateMetadata = useUpdateObjectMetadata();
   const restore = useRestoreObject();
   const versioning = useBucketVersioning(connectionId, bucket);
@@ -227,10 +227,11 @@ function PropertiesForm({
       const key = row.key.trim().toLowerCase();
       if (!key) continue;
       if (key in metadata) {
-        toast({
+        addNotification({
+          type: "error",
           title: "Duplicate metadata key",
-          description: `"${key}" appears more than once.`,
-          variant: "destructive",
+          error: `"${key}" appears more than once.`,
+          status: "error",
         });
         return;
       }
@@ -247,12 +248,13 @@ function PropertiesForm({
         metadata,
         storageClass,
       });
-      toast({ title: "Properties saved" });
+      addNotification({ type: "info", title: "Properties saved", status: "completed" });
     } catch (err) {
-      toast({
+      addNotification({
+        type: "error",
         title: "Couldn't save properties",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        error: err instanceof Error ? err.message : "Unknown error",
+        status: "error",
       });
     }
   }
@@ -417,20 +419,18 @@ function PropertiesForm({
                       bucket,
                       key: objectKey,
                     });
-                    toast({
-                      title:
-                        res.status === "in-progress"
-                          ? "Restore already in progress"
-                          : "Restore initiated",
-                      description:
-                        "Archived objects take minutes to hours to become available. Re-open this panel to check status.",
+                    addNotification({
+                      type: "info",
+                      title: res.status === "in-progress" ? "Restore already in progress" : "Restore initiated",
+                      description: "Archived objects take minutes to hours to become available. Re-open this panel to check status.",
+                      status: "completed",
                     });
                   } catch (err) {
-                    toast({
+                    addNotification({
+                      type: "error",
                       title: "Couldn't start restore",
-                      description:
-                        err instanceof Error ? err.message : "Unknown error",
-                      variant: "destructive",
+                      error: err instanceof Error ? err.message : "Unknown error",
+                      status: "error",
                     });
                   }
                 }}

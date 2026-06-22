@@ -5,6 +5,7 @@ import prisma from "@/lib/db/prisma";
 import { parseSearchQuery } from "@/lib/search/query";
 import { getUserWorkspaceIds } from "@/lib/search/workspace-ids";
 import { isSearchIndexEnabled } from "@/lib/search/feature-flag";
+import { browserRouteHref, parentPrefix } from "@/lib/browser/browser-url";
 
 const rateLimit = new LRUCache<string, number[]>({ max: 5000, ttl: 60_000 });
 
@@ -34,11 +35,6 @@ type SearchRow = {
   connection_endpoint: string;
   score: number;
 };
-
-function dirOf(key: string): string {
-  const i = key.lastIndexOf("/");
-  return i < 0 ? "" : key.slice(0, i + 1);
-}
 
 export const GET = withAuth(async (req, { user }) => {
   if (!isSearchIndexEnabled()) {
@@ -135,7 +131,11 @@ export const GET = withAuth(async (req, { user }) => {
     extension: r.extension,
     tags: r.tags,
     score: r.score,
-    href: `/app/browser/${r.connection_id}/${r.bucket}/${dirOf(r.key)}`,
+    href: browserRouteHref({
+      connectionId: r.connection_id,
+      bucket: r.bucket,
+      path: parentPrefix(r.key),
+    }),
   }));
 
   return NextResponse.json({

@@ -98,9 +98,6 @@ export function FilePreviewModal({
                   </Button>
                 </FeatureGate>
               )}
-              <Button variant="outline" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>

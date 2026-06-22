@@ -8,7 +8,7 @@ import { Database } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { useBucketVersioning, useSetBucketVersioning } from "@/lib/queries/buckets";
 import { getVersioningControl } from "@/lib/buckets/versioning-ui";
-import { toast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import { CapabilityGate } from "@/components/health/capability-gate";
 import type { ConnectionResponse } from "@/lib/queries/connections";
 import type { S3Bucket } from "@/types";
@@ -70,19 +70,24 @@ export function OverviewIdentityCard({
   const setVersioning = useSetBucketVersioning(connectionId, bucket);
   const status = versioning.data?.status ?? "Disabled";
   const control = getVersioningControl(status, canEdit, setVersioning.isPending);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const handleVersioningChange = () => {
     if (!control) return;
 
     setVersioning.mutate(control.enabled, {
       onSuccess: () =>
-        toast({
+        addNotification({
+          type: "info",
           title: control.enabled ? "Versioning enabled." : "Versioning suspended.",
+          status: "completed",
         }),
       onError: (e) =>
-        toast({
+        addNotification({
+          type: "error",
           title: control.enabled ? "Failed to enable" : "Failed to suspend",
-          description: (e as Error).message,
+          error: (e as Error).message,
+          status: "error",
         }),
     });
   };

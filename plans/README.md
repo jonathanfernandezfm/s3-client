@@ -26,6 +26,40 @@ presign, share links); 019–022 close the highest-leverage remaining gaps.
 Independent of all prior plans and of each other (019/022 are client-only;
 020/021 touch object routes but different files).
 
+## In-flight uncommitted work (HEAD `5eeda76`, 2026-06-22)
+
+The working tree has staged but uncommitted changes across 19 files. No
+existing plan covers this work — it predates any planning session and has no
+plan file. Summary for awareness:
+
+1. **Toast-to-NotificationStore migration** — removes the shadcn toast
+   stack (`src/components/ui/toast.tsx`, `src/components/ui/toaster.tsx`,
+   `src/hooks/use-toast.ts`) and migrates 8 call sites
+   (`notes-tab.tsx`, `properties-drawer.tsx`, `version-history-dialog.tsx`,
+   `breadcrumb.tsx`, `file-row.tsx`, `command-palette.tsx`,
+   `overview-identity-card.tsx`, `file-preview-modal.tsx`) to
+   `useNotificationStore` from `src/lib/stores/notification-store`. The new
+   store is richer (typed `NotificationType`, `NotificationStatus`, progress
+   tracking) and was already the source of truth for upload/copy/move
+   notifications; this migration unifies all in-app feedback through it.
+
+2. **`browser-url.ts` extraction** — new shared utility
+   `src/lib/browser/browser-url.ts` exposes `browserRouteHref()` (builds
+   `/app/browser/<connectionId>/<bucket>/[...path]` with proper encoding) and
+   `parentPrefix()` (extracts the folder prefix from an object key). Replaces
+   an inline `dirOf()` in `src/app/api/search/route.ts` and an ad-hoc
+   `lastIndexOf("/")` in `command-palette.tsx`. The command palette now
+   navigates via `router.push(r.href)` (URL-first) rather than manually
+   wiring pane/tab Zustand state. Tests added in
+   `src/lib/browser/browser-url.test.ts`.
+
+3. **Minor UX improvements** — filter-bar polish in `file-browser.tsx`
+   (search icon inside input, absolute-positioned clear button), breadcrumb
+   copy-URI button gains a 2s checkmark-to-copy icon transition, theme toggle
+   refactored to `useSyncExternalStore` (eliminates hydration-side-effect
+   `useEffect`) with a new test in
+   `src/components/shared/theme-toggle.test.tsx`.
+
 Execute in the order below unless dependencies say otherwise. Each
 executor: read the plan fully before starting, honor its STOP conditions,
 and update your row when done.
@@ -34,15 +68,15 @@ and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | Enforce monthly operation quotas and team size caps | P1 | M | — | IN PROGRESS (PR #18) |
-| 002  | Design spike: Lifecycle rules spec | P2 | M | — | IN PROGRESS (PR #17) |
-| 003  | Restore a clean `test + typecheck + lint` baseline | P0 | S | — | IN PROGRESS (PR #16) |
-| 004  | Upgrade dependencies with CRITICAL / HIGH CVEs | P1 | S | 003 | IN PROGRESS (PR #19) |
+| 001  | Enforce monthly operation quotas and team size caps | P1 | M | — | DONE (PR #18) |
+| 002  | Design spike: Lifecycle rules spec | P2 | M | — | DONE (PR #17) |
+| 003  | Restore a clean `test + typecheck + lint` baseline | P0 | S | — | DONE (PR #16) |
+| 004  | Upgrade dependencies with CRITICAL / HIGH CVEs | P1 | S | 003 | DONE (PR #19) |
 | 005  | Add GitHub Actions CI workflow running the composite gate | P1 | S | 003, 004 | TODO |
-| 006  | Batch search-index mutations and stop silently truncating presign-batch | P2 | S | 003 | IN PROGRESS (PR #20) |
+| 006  | Batch search-index mutations and stop silently truncating presign-batch | P2 | S | 003 | DONE (PR #20) |
 | 007  | Add `requireConnectionAccess` + zod schemas + route test harness | P1 | M | 003 | TODO |
 | 008  | Virtualize file-list view and memoize `FileRow` | P2 | M | 003 | TODO |
-| 009  | Scope object/activity/notes invalidations to the affected `(connectionId, bucket)` | P2 | S | 003 | IN PROGRESS (PR #21) |
+| 009  | Scope object/activity/notes invalidations to the affected `(connectionId, bucket)` | P2 | S | 003 | DONE (PR #21) |
 | 010  | Webhook idempotency (Stripe + Clerk) and activity-record observability | P2 | M | 003 | TODO |
 | 011  | Top-level README and archive stale APPLICATION_PLAN.md | P3 | S | — | DONE |
 | 012  | Standardize date/number formatting on a fixed locale (locale hydration, mixed formats, missing year) | P1 | M | — | DONE |
@@ -52,10 +86,10 @@ and update your row when done.
 | 016  | Demote UUID/metadata files into a separate "Metadata" search group | P2 | M | — | DONE |
 | 017  | Landing-page crawl/index/social metadata foundation (metadataBase, robots, sitemap, OG image, JSON-LD) | P2 | S | — | DONE |
 | 018  | Standardize S3 `CopySource` construction on one shared, AWS-correct helper | P2 | S | — | DONE |
-| 019  | Add "Copy key / Copy S3 URI / Copy URL" to the file-row menu | P1 | S | — | IN PROGRESS (PR #23) |
-| 020  | Preserve metadata, tags & storage class on cross-endpoint copy/move | P1 | M | — | IN PROGRESS (PR #24) |
-| 021  | Add a Glacier / Deep Archive "Restore" action | P2 | M | — | IN PROGRESS (PR #22) |
-| 022  | Add "Copy to… / Move to…" destination picker to the bulk-ops toolbar | P2 | M | — | IN PROGRESS (PR #25) |
+| 019  | Add "Copy key / Copy S3 URI / Copy URL" to the file-row menu | P1 | S | — | DONE (PR #23) |
+| 020  | Preserve metadata, tags & storage class on cross-endpoint copy/move | P1 | M | — | DONE (PR #24) |
+| 021  | Add a Glacier / Deep Archive "Restore" action | P2 | M | — | DONE (PR #22) |
+| 022  | Add "Copy to… / Move to…" destination picker to the bulk-ops toolbar | P2 | M | — | DONE (PR #25) |
 | 023  | Surface a read-only bucket security posture card (public access, policy, encryption) | P1 | M | — | DONE (PR #26) |
 | 024  | Design spike: editing bucket permissions (public-access block, policy, object ACLs) | P2 | M | — | DONE (PR #27) |
 | 025  | Stop logging plaintext S3 credentials in the connection-test route | P1 | S | — | DONE |
@@ -145,18 +179,24 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   "In-pane name filter" → 026, "Upload conflict handling = silent overwrite" →
   027, and the `/improve next` "Storage analytics" gap → 029.
 
-## Verification baseline (HEAD `6dbaee9`, pre-003)
+## Verification baseline (HEAD `5eeda76`, post-003/004)
 
-| Gate | Status | Plan that clears it |
-|---|---|---|
-| `pnpm test` | clean — 462 / 462 pass | already clean |
-| `pnpm exec tsc --noEmit` | **2 errors** (in `landing-page.test.tsx`; was 11 — fixed as side-effects of other PRs) | 003 |
-| `pnpm lint` | **27 problems (12 errors, 15 warnings)** | 003 |
-| `pnpm audit --prod --audit-level=critical` | **3 critical, 24 high** | 004 |
+Plans 003 (PR #16) and 004 (PR #19) have landed. The active gate is:
 
-After 003 + 004 land, the gate becomes:
-`pnpm test && pnpm typecheck && pnpm lint && pnpm audit --prod --audit-level=high`
+```
+pnpm test && pnpm typecheck && pnpm lint && pnpm audit --prod --audit-level=high
+```
 → exit 0.
+
+| Gate | Status |
+|---|---|
+| `pnpm test` | clean |
+| `pnpm typecheck` | clean (003 cleared the 2 remaining TSC errors) |
+| `pnpm lint` | clean (003 cleared 27 lint problems) |
+| `pnpm audit --prod --audit-level=high` | clean (004 cleared 3 critical + 24 high CVEs) |
+
+The "no *new* findings vs. pre-edit baseline" workaround used in plans 019–029
+(authored before 003 landed) is no longer needed for new plans.
 
 ## Findings considered and rejected (do not re-audit)
 

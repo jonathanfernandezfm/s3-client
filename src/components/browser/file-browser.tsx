@@ -603,30 +603,31 @@ export function FileBrowser({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-4 py-2 border-b">
-        <Search className="size-3.5 text-muted-foreground shrink-0" />
-        <Input
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
-          placeholder="Filter this folder by name…"
-          aria-label="Filter files by name"
-          className="h-7 text-xs max-w-xs"
-        />
-        {nameFilter && (
-          <>
+      <div className="flex items-center gap-3 pr-2 py-2 pb-5 border-b">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            placeholder="Filter by name…"
+            aria-label="Filter files by name"
+            className="text-xs pt-[17px] pr-[80px] pb-[17px] pl-[38px] max-w-xs"
+          />
+          {nameFilter && (
             <button
               type="button"
               onClick={() => setNameFilter("")}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear name filter"
             >
               <X className="size-3" />
-              Clear
             </button>
-            <span className="text-xs text-muted-foreground">
-              {displayedObjects.length} of {visibleObjects.length}
-            </span>
-          </>
+          )}
+        </div>
+        {nameFilter && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {displayedObjects.length} of {visibleObjects.length}
+          </span>
         )}
       </div>
 

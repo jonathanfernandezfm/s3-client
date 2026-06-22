@@ -20,7 +20,7 @@ import { useBucketVersioning } from "@/lib/queries/buckets";
 import { canDiff } from "@/lib/versions/can-diff";
 import { formatBytes, getFileExtension, cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/components/info-drawer/format-time";
-import { toast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import type { S3ObjectVersion } from "@/types/s3";
 import { History, Trash2, Download, Copy as CopyIcon, MoreHorizontal, X } from "lucide-react";
 import { diffLines } from "diff";
@@ -309,6 +309,7 @@ function ActionBar({
     { connectionId, bucket, key: version.key, versionId: version.versionId },
     { enabled: !version.isDeleteMarker },
   );
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
 
   if (version.isDeleteMarker) {
@@ -326,10 +327,10 @@ function ActionBar({
               },
               {
                 onSuccess: () => {
-                  toast({ title: "Restored deleted file." });
+                  addNotification({ type: "info", title: "Restored deleted file.", status: "completed" });
                   onClose();
                 },
-                onError: (e) => toast({ title: "Undelete failed", description: (e as Error).message }),
+                onError: (e) => addNotification({ type: "error", title: "Undelete failed", error: (e as Error).message, status: "error" }),
               },
             )
           }
@@ -348,7 +349,7 @@ function ActionBar({
           size="sm"
           onClick={() => {
             if (version.isLatest) {
-              toast({ title: "This is already the current version." });
+              addNotification({ type: "info", title: "This is already the current version.", status: "completed" });
               return;
             }
             restore.mutate(
@@ -360,11 +361,11 @@ function ActionBar({
               },
               {
                 onSuccess: () => {
-                  toast({ title: `Restored ${version.key} to selected version.` });
+                  addNotification({ type: "info", title: `Restored ${version.key} to selected version.`, status: "completed" });
                   onClose();
                 },
                 onError: (e) =>
-                  toast({ title: "Restore failed", description: (e as Error).message }),
+                  addNotification({ type: "error", title: "Restore failed", error: (e as Error).message, status: "error" }),
               },
             );
           }}
@@ -408,11 +409,11 @@ function ActionBar({
               { connectionId, bucket, key: version.key, versionId: version.versionId },
               {
                 onSuccess: () => {
-                  toast({ title: "Version permanently deleted." });
+                  addNotification({ type: "delete", title: "Version permanently deleted.", status: "completed" });
                   setShowPurgeConfirm(false);
                 },
                 onError: (e) =>
-                  toast({ title: "Purge failed", description: (e as Error).message }),
+                  addNotification({ type: "error", title: "Purge failed", error: (e as Error).message, status: "error" }),
               },
             )
           }

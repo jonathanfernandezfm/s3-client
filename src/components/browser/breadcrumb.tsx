@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Copy, Home, MoreHorizontal, Settings, Star } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronRight, Copy, Home, MoreHorizontal, Settings, Star } from "lucide-react";
 import { useBookmarksForBucket, useCreateBookmark, useDeleteBookmark } from "@/lib/queries/bookmarks";
 import { findBookmark } from "@/lib/bookmarks-helpers";
-import { toast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import { s3Uri } from "@/lib/s3/uri";
 
 interface BreadcrumbProps {
@@ -24,6 +25,8 @@ export function Breadcrumb({
   onGoHome,
   maxVisibleItems = 3,
 }: BreadcrumbProps) {
+  const [copied, setCopied] = useState(false);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const parts = path.split("/").filter(Boolean);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
   const createBookmark = useCreateBookmark();
@@ -90,7 +93,9 @@ export function Breadcrumb({
       ? s3Uri(bucket, currentPrefix)
       : s3Uri(bucket, "");
     navigator.clipboard.writeText(uriToCopy);
-    toast({ title: "S3 URI copied" });
+    addNotification({ type: "info", title: "S3 URI copied", status: "completed" });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -196,10 +201,10 @@ export function Breadcrumb({
     )}
     <button
       onClick={handleCopyPath}
-      className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground/50 hover:text-muted-foreground"
+      className={`p-1 rounded hover:bg-accent shrink-0 transition-colors ${copied ? "text-green-500" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
       title="Copy S3 URI"
     >
-      <Copy className="size-3.5" />
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
     </button>
     </div>
   );

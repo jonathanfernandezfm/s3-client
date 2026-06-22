@@ -32,6 +32,7 @@ import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
 import { SearchResultsGroup } from "./search-results-group";
 import { OperatorChips } from "./operator-chips";
 import { parseSearchQuery } from "@/lib/search/query";
+import { parentPrefix } from "@/lib/browser/browser-url";
 
 function mapParsedToEcho(p: ReturnType<typeof parseSearchQuery>) {
   return {
@@ -272,19 +273,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             close();
           }}
           onSelectFile={(r) => {
-            if (!paneId || !activeTab) return;
-            updateTabBucket(paneId, activeTab.id, r.connectionId, r.connectionName ?? r.connectionId, r.bucket);
-            const dir = r.key.lastIndexOf("/") >= 0 ? r.key.slice(0, r.key.lastIndexOf("/") + 1) : "";
-            if (dir) updateTabPath(paneId, activeTab.id, dir);
+            const dir = parentPrefix(r.key);
             requestIntent({ kind: "open-preview", connectionId: r.connectionId, bucket: r.bucket, key: r.key });
             pushRecent({ connectionId: r.connectionId, connectionName: r.connectionName ?? r.connectionId, bucket: r.bucket, path: dir });
+            router.push(r.href);
             close();
           }}
           onSelectFolder={(r) => {
-            if (!paneId || !activeTab) return;
-            updateTabBucket(paneId, activeTab.id, r.connectionId, r.connectionName ?? r.connectionId, r.bucket);
-            updateTabPath(paneId, activeTab.id, r.key);
             pushRecent({ connectionId: r.connectionId, connectionName: r.connectionName ?? r.connectionId, bucket: r.bucket, path: r.key });
+            router.push(r.href);
             close();
           }}
         />

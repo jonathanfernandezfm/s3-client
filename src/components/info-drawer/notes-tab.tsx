@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import {
   useNotesForKey,
@@ -35,7 +35,7 @@ function NoteRow({ note }: { note: FileNoteResponse }) {
   const [draft, setDraft] = useState(note.body);
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
-  const { toast } = useToast();
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   async function handleSave() {
     const trimmed = draft.trim();
@@ -48,10 +48,11 @@ function NoteRow({ note }: { note: FileNoteResponse }) {
       await updateNote.mutateAsync({ id: note.id, body: trimmed });
       setMode("view");
     } catch (err) {
-      toast({
+      addNotification({
+        type: "error",
         title: "Couldn't save",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        error: err instanceof Error ? err.message : "Unknown error",
+        status: "error",
       });
     }
   }
@@ -60,10 +61,11 @@ function NoteRow({ note }: { note: FileNoteResponse }) {
     try {
       await deleteNote.mutateAsync(note.id);
     } catch (err) {
-      toast({
+      addNotification({
+        type: "error",
         title: "Couldn't delete",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        error: err instanceof Error ? err.message : "Unknown error",
+        status: "error",
       });
     }
   }
@@ -216,7 +218,7 @@ function Composer({
 }) {
   const [body, setBody] = useState("");
   const createNote = useCreateNote();
-  const { toast } = useToast();
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -235,10 +237,11 @@ function Composer({
       });
       setBody("");
     } catch (err) {
-      toast({
+      addNotification({
+        type: "error",
         title: "Couldn't add note",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        error: err instanceof Error ? err.message : "Unknown error",
+        status: "error",
       });
     }
   }
