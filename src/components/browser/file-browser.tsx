@@ -19,6 +19,7 @@ import { FileList } from "./file-list";
 import { FileGallery } from "./file-gallery";
 import { ViewModeToggle } from "./view-mode-toggle";
 import { UploadZone, UploadButton, UploadFolderButton } from "./upload-zone";
+import { UploadConflictDialog } from "./upload-conflict-dialog";
 import { CreateFolderDialog } from "./create-folder-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { FilePreviewModal } from "@/components/preview/file-preview-modal";
@@ -700,6 +701,8 @@ export function FileBrowser({
         onConfirm={confirmDelete}
         isDeleting={deleteObjects.isPending}
       />
+
+      <UploadConflictDialog />
 
       <FilePreviewModal
         object={previewObject}

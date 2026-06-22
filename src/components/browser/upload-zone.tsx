@@ -11,6 +11,17 @@ import {
 } from "@/lib/uploads/folder-walk";
 import { Upload, FolderUp } from "lucide-react";
 import { notify } from "@/lib/stores/notification-store";
+import { nextAvailableKey } from "@/lib/uploads/conflict-name";
+import { useUploadConflictStore } from "@/lib/stores/upload-conflict-store";
+
+// NOTE: plan 026's objectDisplayName is not available on this branch — use a local helper.
+function basename(key: string): string {
+  const k = key.endsWith("/") ? key.slice(0, -1) : key;
+  const i = k.lastIndexOf("/");
+  return i === -1 ? k : k.slice(i + 1);
+}
+
+const MAX_CONFLICT_CHECK = 1000;
 
 interface UploadZoneProps {
   connectionId: string;
@@ -26,25 +37,109 @@ function useEnqueueFiles(
 ) {
   const queryClient = useQueryClient();
   return useCallback(
-    (files: FileWithPath[]) => {
+    async (files: FileWithPath[]) => {
       if (files.length === 0) {
         notify("info", "Nothing to upload", "No files were found in the selection.");
         return;
       }
-      enqueueUploads(
-        files.map(({ file, relativePath }) => ({
-          file,
-          connectionId,
-          bucket,
-          key: currentPath + relativePath,
-          onComplete: () =>
-            queryClient.invalidateQueries({
-              // Folder uploads can create new prefixes, so invalidate all
-              // object listings for this bucket.
-              queryKey: [...queryKeys.objects.all, connectionId, bucket],
-            }),
-        }))
-      );
+
+      const targets = files.map(({ file, relativePath }) => ({
+        file,
+        key: currentPath + relativePath,
+      }));
+
+      // Local helper: build EnqueueInput array and dispatch.
+      const enqueue = (keys: string[], srcs: { file: File }[]) =>
+        enqueueUploads(
+          srcs.map((t, i) => ({
+            file: t.file,
+            connectionId,
+            bucket,
+            key: keys[i],
+            onComplete: () =>
+              queryClient.invalidateQueries({
+                // Folder uploads can create new prefixes, so invalidate all
+                // object listings for this bucket.
+                queryKey: [...queryKeys.objects.all, connectionId, bucket],
+              }),
+          }))
+        );
+
+      if (targets.length > MAX_CONFLICT_CHECK) {
+        notify(
+          "info",
+          "Uploading",
+          `Existing files may be overwritten (${targets.length} files, conflict check skipped).`
+        );
+        enqueue(targets.map((t) => t.key), targets);
+        return;
+      }
+
+      let existing: string[] = [];
+      try {
+        const res = await fetch("/api/objects/exists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            connectionId,
+            bucket,
+            keys: targets.map((t) => t.key),
+          }),
+        });
+        if (res.ok) {
+          existing = ((await res.json()) as { existing?: string[] }).existing ?? [];
+        } else {
+          notify(
+            "info",
+            "Uploading",
+            "Couldn't check for existing files; they may be overwritten."
+          );
+        }
+      } catch {
+        notify(
+          "info",
+          "Uploading",
+          "Couldn't check for existing files; they may be overwritten."
+        );
+      }
+
+      const existingSet = new Set(existing);
+      if (existingSet.size === 0) {
+        enqueue(targets.map((t) => t.key), targets);
+        return;
+      }
+
+      const choice = await useUploadConflictStore.getState().ask({
+        total: targets.length,
+        conflictCount: existingSet.size,
+        conflictNames: existing.map((k) => basename(k)),
+      });
+
+      if (choice === "cancel") return;
+
+      if (choice === "skip") {
+        const kept = targets.filter((t) => !existingSet.has(t.key));
+        if (kept.length === 0) {
+          notify("info", "Nothing to upload", "All selected files were skipped.");
+          return;
+        }
+        enqueue(kept.map((t) => t.key), kept);
+        return;
+      }
+
+      if (choice === "replace") {
+        enqueue(targets.map((t) => t.key), targets);
+        return;
+      }
+
+      // keep-both: rename only the colliding ones; reserve names as we go.
+      const taken = new Set(existingSet);
+      const renamedKeys = targets.map((t) => {
+        const k = nextAvailableKey(t.key, taken);
+        taken.add(k);
+        return k;
+      });
+      enqueue(renamedKeys, targets);
     },
     [connectionId, bucket, currentPath, queryClient]
   );
