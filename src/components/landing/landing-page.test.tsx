@@ -36,9 +36,7 @@ beforeAll(() => {
     disconnect = vi.fn();
     takeRecords = () => [];
   }
-  // @ts-expect-error test stub
   window.IntersectionObserver = MockObserver;
-  // @ts-expect-error test stub
   window.ResizeObserver = MockObserver;
 });
 

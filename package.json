@@ -8,6 +8,7 @@
 		"start": "prisma migrate deploy && next start",
 		"db:migrate:deploy": "prisma migrate deploy",
 		"lint": "eslint src/",
+		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

@@ -46,7 +46,6 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  Star,
   GripVertical,
   Link2,
   CreditCard,
