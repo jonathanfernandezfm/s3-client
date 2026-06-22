@@ -16,6 +16,16 @@ mis-described or already fixed (see "UX report — considered and rejected"
 below). Plans 012–016 are independent of 001–011 and of each other (no
 cross-dependencies).
 
+Plans 019–022 were authored on 2026-06-22 at commit `d19fb78` from a focused
+`/improve` audit of **file usage & manipulation** (actions like copy/move,
+native S3 features like tags/metadata, and file-workflow UX). The object
+surface is already mature (copy, move, rename, delete, folders, tags
+single+bulk, metadata + content-type + cache-control + storage-class editing,
+full version management, multipart upload with resume, zip download, batch
+presign, share links); 019–022 close the highest-leverage remaining gaps.
+Independent of all prior plans and of each other (019/022 are client-only;
+020/021 touch object routes but different files).
+
 Execute in the order below unless dependencies say otherwise. Each
 executor: read the plan fully before starting, honor its STOP conditions,
 and update your row when done.
@@ -24,15 +34,15 @@ and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | Enforce monthly operation quotas and team size caps | P1 | M | — | TODO |
-| 002  | Design spike: Lifecycle rules spec | P2 | M | — | TODO |
-| 003  | Restore a clean `test + typecheck + lint` baseline | P0 | S | — | TODO |
-| 004  | Upgrade dependencies with CRITICAL / HIGH CVEs | P1 | S | 003 | TODO |
+| 001  | Enforce monthly operation quotas and team size caps | P1 | M | — | IN PROGRESS (PR #18) |
+| 002  | Design spike: Lifecycle rules spec | P2 | M | — | IN PROGRESS (PR #17) |
+| 003  | Restore a clean `test + typecheck + lint` baseline | P0 | S | — | IN PROGRESS (PR #16) |
+| 004  | Upgrade dependencies with CRITICAL / HIGH CVEs | P1 | S | 003 | IN PROGRESS (PR #19) |
 | 005  | Add GitHub Actions CI workflow running the composite gate | P1 | S | 003, 004 | TODO |
-| 006  | Batch search-index mutations and stop silently truncating presign-batch | P2 | S | 003 | TODO |
+| 006  | Batch search-index mutations and stop silently truncating presign-batch | P2 | S | 003 | IN PROGRESS (PR #20) |
 | 007  | Add `requireConnectionAccess` + zod schemas + route test harness | P1 | M | 003 | TODO |
 | 008  | Virtualize file-list view and memoize `FileRow` | P2 | M | 003 | TODO |
-| 009  | Scope object/activity/notes invalidations to the affected `(connectionId, bucket)` | P2 | S | 003 | TODO |
+| 009  | Scope object/activity/notes invalidations to the affected `(connectionId, bucket)` | P2 | S | 003 | IN PROGRESS (PR #21) |
 | 010  | Webhook idempotency (Stripe + Clerk) and activity-record observability | P2 | M | 003 | TODO |
 | 011  | Top-level README and archive stale APPLICATION_PLAN.md | P3 | S | — | DONE |
 | 012  | Standardize date/number formatting on a fixed locale (locale hydration, mixed formats, missing year) | P1 | M | — | DONE |
@@ -42,6 +52,17 @@ and update your row when done.
 | 016  | Demote UUID/metadata files into a separate "Metadata" search group | P2 | M | — | DONE |
 | 017  | Landing-page crawl/index/social metadata foundation (metadataBase, robots, sitemap, OG image, JSON-LD) | P2 | S | — | DONE |
 | 018  | Standardize S3 `CopySource` construction on one shared, AWS-correct helper | P2 | S | — | DONE |
+| 019  | Add "Copy key / Copy S3 URI / Copy URL" to the file-row menu | P1 | S | — | IN PROGRESS (PR #23) |
+| 020  | Preserve metadata, tags & storage class on cross-endpoint copy/move | P1 | M | — | IN PROGRESS (PR #24) |
+| 021  | Add a Glacier / Deep Archive "Restore" action | P2 | M | — | IN PROGRESS (PR #22) |
+| 022  | Add "Copy to… / Move to…" destination picker to the bulk-ops toolbar | P2 | M | — | IN PROGRESS (PR #25) |
+| 023  | Surface a read-only bucket security posture card (public access, policy, encryption) | P1 | M | — | DONE (PR #26) |
+| 024  | Design spike: editing bucket permissions (public-access block, policy, object ACLs) | P2 | M | — | DONE (PR #27) |
+| 025  | Stop logging plaintext S3 credentials in the connection-test route | P1 | S | — | DONE |
+| 026  | Add an in-pane "filter by name" box to the file browser | P1 | S | — | DONE (PR #29) |
+| 027  | Warn on upload key conflicts instead of silently overwriting | P1 | M | — | DONE (PR #30) |
+| 028  | Export the activity log to CSV | P2 | M | — | DONE (PR #32) |
+| 029  | Break bucket storage stats down by file type + largest objects | P2 | M | — | DONE (PR #31) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
@@ -71,6 +92,58 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 018 is dependency-free (authored 2026-06-22 at `8d46baa` from a focused
   `/improve` audit of the post-`6dbaee9` split-properties-drawer feature
   surface). Pure refactor + tests, independent of all other plans.
+- 019–022 are all dependency-free and parallelizable. Two soft sequencing
+  notes: (a) **022 reads better after 020** — the bulk Copy/Move UI exposes the
+  cross-endpoint transfer path that 020 fixes, so landing 020 first means the
+  new UI never ships the metadata/tag-loss behaviour (022's maintenance note
+  flags this if order is reversed). (b) 019 and 022 are client-only and don't
+  depend on 003's typecheck/lint baseline being clean, but their gates use the
+  "no *new* findings vs. pre-edit baseline" pattern (plans 001/002 style) until
+  003 lands.
+- 023–024 were authored on 2026-06-22 at commit `d19fb78` from a focused
+  `/improve` direction question about **S3 permission manipulation**. They are a
+  paired read-then-decide-write set on bucket *configuration* (not the app's
+  RBAC, which is already mature — see the note below): **023 ships read-only
+  security visibility** (public-access block, bucket-policy IsPublic, encryption
+  — all genuinely unbuilt; grep confirmed zero source hits) as a buildable
+  Overview card; **024 is a 002-style design spike** that decides whether/how the
+  *write* side (editing public-access, policies, ACLs) ever ships, because that
+  is a data-exposure abuse surface. Both are dependency-free and parallelizable.
+  Soft note: **024's spec builds on 023's read module** (`src/lib/s3/security-posture.ts`)
+  as the "current state" the editor would mutate, so landing 023 first makes the
+  spike concrete; the spike explicitly handles 023 not having landed. Like
+  019–022, both use the "no *new* findings vs. pre-edit baseline" gate until 003
+  lands. Note 024 supersedes the deferred "Object ACL / public-access surface"
+  item recorded in the file-manipulation audit section below.
+- 025 was authored on 2026-06-22 at commit `e43a443` from a `/security-review`
+  pass over the whole project (not the `/improve` skill). It is the only
+  high-confidence finding from that review — a confirmed plaintext-credential
+  leak (`console.log(connectionConfig)` in the connection-test route). It is
+  dependency-free, one-file, and should ship promptly given it leaks live S3
+  secret keys to server logs. The review's other candidate (authenticated SSRF
+  via arbitrary user-supplied S3 endpoints) was vetted and **rejected** —
+  connecting to any endpoint is the core product feature and the residual
+  internal-probe risk is mitigated only by an egress allowlist (hardening), not
+  a concrete exfiltration bug.
+
+- 026–029 were authored on 2026-06-22 at commit `d19fb78` from an `/improve`
+  **direction** ("plan new features / things missing") session. The app's
+  feature surface is already mature, so these are the highest-leverage *unbuilt*
+  gaps found after cross-checking every prior plan and the deferred lists below:
+  **026** in-pane name filter (client-only; the only existing in-folder filter
+  is by *tag*, and the global palette search is PRO-gated), **027** upload
+  overwrite guard (confirmed: the upload path has no existence check — PutObject
+  silently overwrites), **028** activity-log CSV export (the `ActivityEvent`
+  audit trail is read-only in the UI), **029** storage analytics by file-type +
+  largest-objects (enriches the existing full-enumeration stats pass; no new S3
+  calls). All four are dependency-free and parallelizable. Soft note: **027's
+  conflict dialog reuses `objectDisplayName` from 026's
+  `src/lib/browser/name-filter.ts`** — if 026 hasn't landed, 027 inlines a local
+  `basename()` instead (its plan says so). Like 019–025, all four use the
+  "no *new* tsc/lint findings vs. pre-edit baseline" gate until plan 003 lands a
+  clean baseline. These supersede three items from the deferred lists below:
+  "In-pane name filter" → 026, "Upload conflict handling = silent overwrite" →
+  027, and the `/improve next` "Storage analytics" gap → 029.
 
 ## Verification baseline (HEAD `6dbaee9`, pre-003)
 
@@ -161,6 +234,46 @@ surface (2026-06-22, `8d46baa`) — vetted and dropped:
   — real but low-severity robustness nits; recorded as deferred follow-ups in
   plan 018's maintenance notes, not promoted to plans unless orphaned-object
   reports appear.
+
+## File-manipulation audit — considered and deferred (2026-06-22, `d19fb78`)
+
+From the focused `/improve` audit of file usage & manipulation. The user
+selected 019–022 to plan. These were surfaced, vetted, and **not** planned this
+round:
+
+- **Object ACL / public-access surface** (no `GetObjectAcl`/`PutObjectAcl`/
+  `public-read` anywhere) — real and common ("make this object public / get its
+  public URL"), but needs a product call: it interacts with bucket
+  public-access-block and is an abuse surface. **NOW PLANNED (2026-06-22):** the
+  read/visibility half became plan **023** (security posture card) and the
+  write/edit half became the design spike **024** — the "design spike when
+  prioritized" recommendation here was acted on. Plan 023 also covers the
+  "Config/compliance health probes" overlap (GetPublicAccessBlock,
+  GetBucketEncryption) for the read path.
+- **Upload conflict handling = silent overwrite** — PutObject overwrites a
+  same-key object with no warning; a skip/replace/rename prompt would prevent
+  surprise data loss. Real, but rated **MED confidence** (the upload path was not
+  exhaustively traced — verify there's truly no exists-check before planning).
+  Plannable later.
+- **In-pane name filter** — finding an object in the current folder requires the
+  global command palette, which is PRO-gated (`src/lib/queries/search.ts:64`). A
+  client-side name filter over the already-loaded list is cheap and ungated.
+  Small; plannable later.
+- **Content-Disposition / Content-Encoding / Content-Language not editable** —
+  they're read and preserved (and, after 020, carried cross-endpoint) but the
+  properties drawer only edits content-type / cache-control / storage-class. Low
+  value; not worth a standalone plan.
+- **Vetted-and-corrected**: the claim "copy/move drop metadata and tags" is
+  **only true cross-endpoint** — same-endpoint copy/move/rename uses
+  `CopyObjectCommand` with AWS default directives (`MetadataDirective`/
+  `TaggingDirective` = COPY) and preserves them. Plan 020 is scoped to the
+  cross-endpoint path only; do not "fix" the same-endpoint branch.
+- **Large-object copy limits**: cross-endpoint copy uses `@aws-sdk/lib-storage`
+  `Upload`, which does multipart automatically — so large cross-endpoint copies
+  already work. The genuine >5GB limits are (a) same-endpoint single
+  `CopyObject` (would need `UploadPartCopy`) and (b) in-place metadata edit
+  (capped at 5GB in `src/lib/s3/metadata.ts:15`). Neither is planned — no
+  user reports, and the metadata cap is documented/by-design.
 
 ## UX report — considered and rejected / deferred (2026-06-21, `8d46baa`)
 
