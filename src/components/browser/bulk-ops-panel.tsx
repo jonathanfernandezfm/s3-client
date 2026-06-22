@@ -12,8 +12,10 @@ import {
   setObjectTags,
   useInvalidateNotesAndObjects,
 } from "@/lib/queries/objects-bulk";
+import { useCopyObjects, useMoveObjects } from "@/lib/queries/objects";
 import { BulkRenameDialog } from "./bulk-rename-dialog";
 import { BulkTagDialog } from "./bulk-tag-dialog";
+import { DestinationPickerDialog, type Destination } from "./destination-picker-dialog";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Tag, Trash2, X, Loader2, AlertCircle, Check, Link2, Download } from "lucide-react";
+import { Pencil, Tag, Trash2, X, Loader2, AlertCircle, Check, Link2, Download, Copy, FolderInput } from "lucide-react";
 import type { S3Object } from "@/types";
 import type { RenamePreviewItem } from "@/lib/bulk-rename";
 import { useCreateShareLink } from "@/lib/queries/share-links";
@@ -68,6 +70,9 @@ export function BulkOpsPanel({
   const invalidateObjects = useInvalidateNotesAndObjects();
   const createShare = useCreateShareLink();
   const [shareProgress, setShareProgress] = useState<{ done: number; total: number } | null>(null);
+  const copyObjects = useCopyObjects();
+  const moveObjects = useMoveObjects();
+  const [transferMode, setTransferMode] = useState<"copy" | "move" | null>(null);
 
   async function shareAll() {
     const files = selection.filter((o) => !o.isFolder);
@@ -238,7 +243,46 @@ export function BulkOpsPanel({
     );
   }, [closeDialog, runLoop, selection, connectionId, bucket]);
 
-  if (!showIdle && !showProgress && !dialogOpen) {
+  async function handleTransfer(dest: Destination) {
+    const mode = transferMode;
+    setTransferMode(null);
+    if (!mode) return;
+    const sourceKeys = selection.map((o) => o.key);
+    if (sourceKeys.length === 0) return;
+    const notifId = addNotification({
+      type: "info",
+      title: `${mode === "copy" ? "Copying" : "Moving"} ${sourceKeys.length} item${sourceKeys.length !== 1 ? "s" : ""}…`,
+      status: "in-progress",
+    });
+    try {
+      const mutation = mode === "copy" ? copyObjects : moveObjects;
+      const res = await mutation.mutateAsync({
+        sourceConnectionId: connectionId,
+        sourceBucket: bucket,
+        sourceKeys,
+        targetConnectionId: dest.connectionId,
+        targetBucket: dest.bucket,
+        targetPath: dest.path,
+      });
+      const failed = res.summary.failed;
+      updateNotification(notifId, {
+        status: failed === 0 ? "completed" : "error",
+        title:
+          failed === 0
+            ? `${mode === "copy" ? "Copied" : "Moved"} ${res.summary.successful} item${res.summary.successful !== 1 ? "s" : ""}`
+            : `${mode === "copy" ? "Copy" : "Move"} finished with ${failed} error${failed !== 1 ? "s" : ""}`,
+      });
+      if (failed === 0) clearSelection(paneId);
+    } catch (err) {
+      updateNotification(notifId, {
+        status: "error",
+        title: `${mode === "copy" ? "Copy" : "Move"} failed`,
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  if (!showIdle && !showProgress && !dialogOpen && transferMode === null) {
     return null;
   }
 
@@ -260,6 +304,18 @@ export function BulkOpsPanel({
               Download
             </Button>
           </CapabilityGate>
+          {canWrite && (
+            <Button size="sm" variant="ghost" onClick={() => setTransferMode("copy")}>
+              <Copy className="h-4 w-4" />
+              Copy to…
+            </Button>
+          )}
+          {canWrite && (
+            <Button size="sm" variant="ghost" onClick={() => setTransferMode("move")}>
+              <FolderInput className="h-4 w-4" />
+              Move to…
+            </Button>
+          )}
           {canWrite && (
             <Button size="sm" variant="ghost" onClick={() => openDialog("rename", paneId)}>
               <Pencil className="h-4 w-4" />
@@ -410,6 +466,17 @@ export function BulkOpsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {transferMode !== null && (
+        <DestinationPickerDialog
+          open={transferMode !== null}
+          mode={transferMode}
+          count={selection.length}
+          defaultConnectionId={connectionId}
+          defaultBucket={bucket}
+          onCancel={() => setTransferMode(null)}
+          onConfirm={handleTransfer}
+        />
+      )}
     </>
   );
 }
