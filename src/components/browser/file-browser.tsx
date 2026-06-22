@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Star, History, MessageSquare, Activity } from "lucide-react";
+import { Loader2, RefreshCw, Star, History, MessageSquare, Activity, Search, X } from "lucide-react";
 import { canManageFiles } from "@/lib/roles";
 import { useInfoDrawerStore } from "@/lib/stores/info-drawer-store";
 import { useNotesForKey, useNoteCounts } from "@/lib/queries/notes";
@@ -39,6 +39,8 @@ import { useShareLinkCounts } from "@/lib/queries/share-links";
 import { useFileTags } from "@/lib/queries/tags";
 import { distinctTagValues } from "@/lib/tags";
 import { TagFilterBar } from "./tag-filter-bar";
+import { filterObjectsByName } from "@/lib/browser/name-filter";
+import { Input } from "@/components/ui/input";
 import { BulkOpsPanel } from "./bulk-ops-panel";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { CapabilityGate } from "@/components/health/capability-gate";
@@ -158,9 +160,11 @@ export function FileBrowser({
   const folderTagValues = distinctTagValues(fileTags);
 
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [nameFilter, setNameFilter] = useState("");
 
   useEffect(() => {
     setActiveTag(null);
+    setNameFilter("");
   }, [connectionId, bucket, currentPath]);
 
   const handleTagToggle = useCallback(
@@ -176,6 +180,7 @@ export function FileBrowser({
         (o) => o.isFolder || (fileTags[o.key] ?? []).includes(activeTag)
       )
     : objects;
+  const displayedObjects = filterObjectsByName(visibleObjects, nameFilter);
 
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
 
@@ -597,6 +602,33 @@ export function FileBrowser({
         </div>
       </div>
 
+      <div className="flex items-center gap-2 px-4 py-2 border-b">
+        <Search className="size-3.5 text-muted-foreground shrink-0" />
+        <Input
+          value={nameFilter}
+          onChange={(e) => setNameFilter(e.target.value)}
+          placeholder="Filter this folder by name…"
+          aria-label="Filter files by name"
+          className="h-7 text-xs max-w-xs"
+        />
+        {nameFilter && (
+          <>
+            <button
+              type="button"
+              onClick={() => setNameFilter("")}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              aria-label="Clear name filter"
+            >
+              <X className="size-3" />
+              Clear
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {displayedObjects.length} of {visibleObjects.length}
+            </span>
+          </>
+        )}
+      </div>
+
       <TagFilterBar
         tags={folderTagValues}
         activeTag={activeTag}
@@ -620,7 +652,7 @@ export function FileBrowser({
         >
           {paneState.viewMode === "grid" ? (
             <FileGallery
-              objects={visibleObjects}
+              objects={displayedObjects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
@@ -644,7 +676,7 @@ export function FileBrowser({
             />
           ) : (
             <FileList
-              objects={visibleObjects}
+              objects={displayedObjects}
               connectionId={connectionId}
               bucket={bucket}
               currentPath={currentPath}
