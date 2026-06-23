@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth";
 import {
-  getConnectionsByUserId,
+  listConnectionsWithAccess,
   createConnection,
   ensurePersonalWorkspace,
   getWorkspaceAccess,
-  getConnectionAccessById,
   type ConnectionInput,
 } from "@/lib/db/connections";
 import { canCreateConnection } from "@/lib/subscriptions";
@@ -16,28 +15,22 @@ import { isSearchIndexEnabled } from "@/lib/search/feature-flag";
 // GET /api/connections - List user's connections
 export const GET = withAuth(async (req, { user }) => {
   const workspaceId = req.nextUrl.searchParams.get("workspaceId") || undefined;
-  const connections = await getConnectionsByUserId(user.id, workspaceId);
+  const entries = await listConnectionsWithAccess(user.id, workspaceId);
 
-  // Don't expose secret keys in the list response
-  const accessEntries = await Promise.all(
-    connections.map((conn) => getConnectionAccessById(conn.id, user.id))
-  );
-
-  const safeConnections = accessEntries
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    .map((entry) => ({
-      id: entry.connection.id,
-      name: entry.connection.name,
-      endpoint: entry.connection.endpoint,
-      region: entry.connection.region,
-      accessKeyId: entry.connection.accessKeyId,
-      forcePathStyle: entry.connection.forcePathStyle,
-      workspaceId: entry.workspaceId,
-      workspaceType: entry.workspaceType,
-      role: entry.role,
-      createdAt: entry.connection.createdAt,
-      updatedAt: entry.connection.updatedAt,
-    }));
+  // Secrets are never resolved or returned for the list view.
+  const safeConnections = entries.map((entry) => ({
+    id: entry.connection.id,
+    name: entry.connection.name,
+    endpoint: entry.connection.endpoint,
+    region: entry.connection.region,
+    accessKeyId: entry.connection.accessKeyId,
+    forcePathStyle: entry.connection.forcePathStyle,
+    workspaceId: entry.workspaceId,
+    workspaceType: entry.workspaceType,
+    role: entry.role,
+    createdAt: entry.connection.createdAt,
+    updatedAt: entry.connection.updatedAt,
+  }));
 
   return NextResponse.json(safeConnections);
 });
