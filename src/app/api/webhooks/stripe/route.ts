@@ -6,8 +6,9 @@ import {
   buildSubscriptionUpsertFromCheckout,
   buildSubscriptionUpdateFromDeleted,
   buildSubscriptionUpdateFromUpdated,
+  describePaymentFailure,
 } from "./handler";
-import { markWebhookProcessed } from "@/lib/db/webhook-events";
+import { markWebhookProcessed, forgetWebhookEvent } from "@/lib/db/webhook-events";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -69,12 +70,24 @@ export async function POST(req: NextRequest) {
       }
 
       case "invoice.payment_failed": {
-        console.warn("Stripe invoice.payment_failed", event.data.object);
+        const invoice = event.data.object as Stripe.Invoice;
+        const info = describePaymentFailure(invoice);
+        const sub = info.stripeCustomerId
+          ? await prisma.subscription.findUnique({
+              where: { stripeCustomerId: info.stripeCustomerId },
+              select: { userId: true },
+            })
+          : null;
+        console.warn("[stripe] invoice.payment_failed", {
+          ...info,
+          userId: sub?.userId ?? null,
+        });
         break;
       }
     }
   } catch (err) {
     console.error("Stripe webhook processing error", err);
+    await forgetWebhookEvent("STRIPE", event.id);
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 

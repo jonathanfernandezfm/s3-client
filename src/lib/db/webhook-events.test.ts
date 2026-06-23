@@ -5,12 +5,13 @@ vi.mock("@/lib/db/prisma", () => ({
   default: {
     webhookEvent: {
       create: vi.fn(),
+      deleteMany: vi.fn(),
     },
   },
 }));
 
 import prisma from "@/lib/db/prisma";
-import { markWebhookProcessed } from "./webhook-events";
+import { markWebhookProcessed, forgetWebhookEvent } from "./webhook-events";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -46,5 +47,43 @@ describe("markWebhookProcessed", () => {
     await expect(
       markWebhookProcessed("CLERK", "svix_abc", "user.created")
     ).rejects.toThrow("Connection refused");
+  });
+});
+
+describe("forgetWebhookEvent", () => {
+  test("calls deleteMany with the correct source and eventId", async () => {
+    (prisma.webhookEvent.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
+
+    await forgetWebhookEvent("STRIPE", "evt_1");
+
+    expect(prisma.webhookEvent.deleteMany).toHaveBeenCalledOnce();
+    expect(prisma.webhookEvent.deleteMany).toHaveBeenCalledWith({
+      where: { source: "STRIPE", eventId: "evt_1" },
+    });
+  });
+
+  test("resolves without throwing even when deleteMany rejects", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    (prisma.webhookEvent.deleteMany as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("DB timeout")
+    );
+
+    await expect(forgetWebhookEvent("CLERK", "svix_abc")).resolves.toBeUndefined();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[webhook] failed to roll back idempotency row",
+      expect.objectContaining({ source: "CLERK", eventId: "svix_abc" })
+    );
+    consoleSpy.mockRestore();
+  });
+
+  test("works with CLERK source", async () => {
+    (prisma.webhookEvent.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
+
+    await forgetWebhookEvent("CLERK", "svix_xyz");
+
+    expect(prisma.webhookEvent.deleteMany).toHaveBeenCalledWith({
+      where: { source: "CLERK", eventId: "svix_xyz" },
+    });
   });
 });

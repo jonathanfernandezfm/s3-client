@@ -38,3 +38,24 @@ export async function markWebhookProcessed(
     throw err;
   }
 }
+
+/**
+ * Delete the idempotency row so the provider's retry is treated as a new event.
+ *
+ * Call ONLY after the handler failed and you are about to return a non-2xx response.
+ * Errors are swallowed (logged only) so they never mask the original handler error.
+ */
+export async function forgetWebhookEvent(
+  source: WebhookSource,
+  eventId: string
+): Promise<void> {
+  try {
+    await prisma.webhookEvent.deleteMany({ where: { source, eventId } });
+  } catch (err) {
+    console.error("[webhook] failed to roll back idempotency row", {
+      source,
+      eventId,
+      reason: err,
+    });
+  }
+}

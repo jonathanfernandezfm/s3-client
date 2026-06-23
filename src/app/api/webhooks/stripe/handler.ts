@@ -1,5 +1,17 @@
 import type Stripe from "stripe";
 
+export function describePaymentFailure(invoice: Stripe.Invoice) {
+  return {
+    stripeCustomerId:
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id ?? null,
+    invoiceId: invoice.id,
+    amountDue: invoice.amount_due ?? null,
+    attemptCount: invoice.attempt_count ?? null,
+  };
+}
+
 export function buildSubscriptionUpsertFromCheckout(
   session: Stripe.Checkout.Session,
   sub: Stripe.Subscription

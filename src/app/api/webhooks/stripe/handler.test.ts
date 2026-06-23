@@ -3,6 +3,7 @@ import {
   buildSubscriptionUpsertFromCheckout,
   buildSubscriptionUpdateFromDeleted,
   buildSubscriptionUpdateFromUpdated,
+  describePaymentFailure,
 } from "./handler";
 
 describe("buildSubscriptionUpsertFromCheckout", () => {
@@ -67,5 +68,45 @@ describe("buildSubscriptionUpdateFromUpdated", () => {
     expect(result.data.cancelAtPeriodEnd).toBe(true);
     expect(result.data.tier).toBe("PRO");
     expect(result.data.stripePriceId).toBe("price_pro");
+  });
+});
+
+describe("describePaymentFailure", () => {
+  test("extracts stripeCustomerId when customer is a string", () => {
+    const invoice = {
+      id: "in_abc",
+      customer: "cus_123",
+      amount_due: 2000,
+      attempt_count: 1,
+    };
+    const result = describePaymentFailure(invoice as never);
+    expect(result.stripeCustomerId).toBe("cus_123");
+    expect(result.invoiceId).toBe("in_abc");
+    expect(result.amountDue).toBe(2000);
+    expect(result.attemptCount).toBe(1);
+  });
+
+  test("extracts stripeCustomerId when customer is an object with .id", () => {
+    const invoice = {
+      id: "in_def",
+      customer: { id: "cus_456", object: "customer" },
+      amount_due: 5000,
+      attempt_count: 2,
+    };
+    const result = describePaymentFailure(invoice as never);
+    expect(result.stripeCustomerId).toBe("cus_456");
+    expect(result.invoiceId).toBe("in_def");
+  });
+
+  test("sets stripeCustomerId to null when customer is missing", () => {
+    const invoice = {
+      id: "in_ghi",
+      customer: null,
+      amount_due: 1000,
+      attempt_count: 1,
+    };
+    const result = describePaymentFailure(invoice as never);
+    expect(result.stripeCustomerId).toBeNull();
+    expect(result.invoiceId).toBe("in_ghi");
   });
 });
