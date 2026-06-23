@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Folder, FileImage, FileText, File, Loader2, MessageSquare, Link2,
@@ -45,10 +45,10 @@ interface FileTileProps {
   currentPath: string;
   canWrite?: boolean;
   isSelected: boolean;
-  onSelect: (mods: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void;
-  onPreview: () => void;
-  onDelete?: () => void;
-  onDownload?: () => void;
+  onSelect: (key: string, mods: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void;
+  onPreview: (object: S3Object) => void;
+  onDelete?: (key: string) => void;
+  onDownload?: (key: string) => void;
   onNavigate?: (path: string) => void;
   thumbnailUrl?: string;
   paneId: string;
@@ -66,7 +66,7 @@ interface FileTileProps {
   onTagClick?: (tag: string) => void;
 }
 
-export function FileTile({
+function FileTileImpl({
   object,
   connectionId,
   bucket,
@@ -166,7 +166,7 @@ export function FileTile({
           if (e.shiftKey || e.ctrlKey || e.metaKey) {
             e.preventDefault();
             e.stopPropagation();
-            onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+            onSelect(object.key, { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
           }
         }}
       >
@@ -176,7 +176,7 @@ export function FileTile({
           onChange={() => {}}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+            onSelect(object.key, { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
           }}
           data-selected={isSelected}
           className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
@@ -225,7 +225,7 @@ export function FileTile({
                   </DropdownMenuItem>
                   {canWrite && (
                     <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects" disableOnly>
-                      <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                      <DropdownMenuItem className="text-destructive" onClick={() => onDelete?.(object.key)}>
                         <Trash2 className="h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -267,7 +267,7 @@ export function FileTile({
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           e.preventDefault();
           e.stopPropagation();
-          onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+          onSelect(object.key, { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
         }
       }}
     >
@@ -277,14 +277,14 @@ export function FileTile({
         onChange={() => {}}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect({ shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+          onSelect(object.key, { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
         }}
         data-selected={isSelected}
         className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 data-[selected=true]:opacity-100 z-10"
       />
       <div
         className="aspect-square rounded-md border bg-muted overflow-hidden relative flex items-center justify-center cursor-pointer"
-        onClick={onPreview}
+        onClick={() => onPreview(object)}
       >
         {thumbnailUrl ? (
           <>
@@ -323,7 +323,7 @@ export function FileTile({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onPreview}>
+              <DropdownMenuItem onClick={() => onPreview(object)}>
                 <Eye className="h-4 w-4" />
                 Preview
               </DropdownMenuItem>
@@ -334,7 +334,7 @@ export function FileTile({
                 </DropdownMenuItem>
               </CapabilityGate>
               <CapabilityGate connectionId={connectionId} bucket={bucket} capability="download-objects" disableOnly>
-                <DropdownMenuItem onClick={onDownload}>
+                <DropdownMenuItem onClick={() => onDownload?.(object.key)}>
                   <Download className="h-4 w-4" />
                   Download
                 </DropdownMenuItem>
@@ -380,7 +380,7 @@ export function FileTile({
               )}
               {canWrite && (
                 <CapabilityGate connectionId={connectionId} bucket={bucket} capability="delete-objects" disableOnly>
-                  <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                  <DropdownMenuItem className="text-destructive" onClick={() => onDelete?.(object.key)}>
                     <Trash2 className="h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
@@ -436,3 +436,5 @@ export function FileTile({
     </div>
   );
 }
+
+export const FileTile = React.memo(FileTileImpl);

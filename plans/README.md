@@ -84,7 +84,7 @@ and update your row when done.
 | 042  | Add accessible names to icon-only buttons in bucket grid and pane tab bar | P3 | S | — | DONE |
 | 043  | Resolve connection list access in one query; stop decrypting secrets the list never returns | P1 | M | — | DONE |
 | 044  | Memoize derived object lists (folderKeys/fileKeys/visibleObjects/displayedObjects + bulk-ops selection) in the file browser | P2 | S | — | DONE |
-| 045  | Memoize the gallery `FileTile` + pass stable callbacks, matching the memoized list `FileRow` | P2 | M | — | TODO |
+| 045  | Memoize the gallery `FileTile` + pass stable callbacks, matching the memoized list `FileRow` | P2 | M | — | DONE |
 | 046  | Scope note & share-link mutation invalidations to the affected `(connectionId, bucket)` | P3 | M | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
