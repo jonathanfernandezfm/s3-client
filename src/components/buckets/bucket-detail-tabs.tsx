@@ -40,6 +40,20 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
     router.push(`/app/buckets/${connectionId}/${encodeURIComponent(bucket)}?${params.toString()}`);
   };
 
+  const TAB_KEYS = TAB_DEFINITIONS.map((d) => d.key);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    const idx = TAB_KEYS.indexOf(activeTab);
+    let next = idx;
+    if (e.key === "ArrowRight") next = (idx + 1) % TAB_KEYS.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + TAB_KEYS.length) % TAB_KEYS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TAB_KEYS.length - 1;
+    else return;
+    e.preventDefault();
+    setTab(TAB_KEYS[next]);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <header className="border-b px-6 py-4 space-y-3 pb-0">
@@ -59,18 +73,25 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
             </span>
           )}
         </div>
-        <nav className="flex items-center gap-1 -mb-px">
+        <nav role="tablist" aria-label="Bucket sections" className="flex items-center gap-1 -mb-px">
           {TAB_DEFINITIONS.map((def) => {
             const { key, label, icon: Icon } = def;
             const badge = "badge" in def ? def.badge : undefined;
+            const selected = key === activeTab;
             return (
               <button
                 key={key}
+                id={`bucket-tab-${key}`}
                 type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls="bucket-tabpanel"
+                tabIndex={selected ? 0 : -1}
                 onClick={() => setTab(key)}
+                onKeyDown={handleTabKeyDown}
                 className={cn(
                   "flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors",
-                  key === activeTab
+                  selected
                     ? "border-foreground text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
@@ -88,7 +109,13 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
         </nav>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        id="bucket-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`bucket-tab-${activeTab}`}
+        tabIndex={0}
+        className="flex-1 overflow-y-auto p-6"
+      >
         {activeTab === "overview" && (
           <OverviewTab connectionId={connectionId} bucket={bucket} />
         )}
