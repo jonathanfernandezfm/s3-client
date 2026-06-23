@@ -16,7 +16,7 @@ vi.mock("@/lib/s3/copy-fidelity", () => ({
   buildFidelityParams: vi.fn().mockReturnValue({}),
 }));
 vi.mock("@/lib/db/activity", () => ({
-  recordActivityBatch: vi.fn(),
+  recordActivityBatch: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("@/lib/db/prisma", () => ({
   default: { fileNote: { updateMany: vi.fn() } },

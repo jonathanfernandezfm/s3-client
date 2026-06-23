@@ -11,7 +11,7 @@ vi.mock("@/lib/s3/client", () => ({
   createS3Client: vi.fn(),
 }));
 vi.mock("@/lib/db/activity", () => ({
-  recordActivityBatch: vi.fn(),
+  recordActivityBatch: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("@/lib/db/prisma", () => ({
   default: { fileNote: { deleteMany: vi.fn() } },

@@ -24,7 +24,11 @@ jobs:
       # at module-evaluation time. None are real secrets; all are placeholders
       # to let module imports succeed during build.
       CLERK_SECRET_KEY: sk_test_dummy
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dummy
+      # Must be a *validly-formatted* Clerk key (base64 suffix decoding to a
+      # frontend-API domain), else @clerk/clerk-react throws "publishableKey is
+      # invalid" while `next build` prerenders Clerk-mounted pages. This decodes
+      # to `clerk.example.com$` — a placeholder, not a real key.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
       CLERK_WEBHOOK_SECRET: whsec_dummy
       ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
       SHARE_LINK_COOKIE_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"

@@ -13,7 +13,7 @@ vi.mock("@/lib/s3/copy-source", () => ({
   buildCopySource: vi.fn().mockReturnValue("bucket/key"),
 }));
 vi.mock("@/lib/db/activity", () => ({
-  recordActivity: vi.fn(),
+  recordActivity: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("@/lib/db/prisma", () => ({
   default: { fileNote: { updateMany: vi.fn() } },

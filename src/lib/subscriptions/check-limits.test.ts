@@ -52,7 +52,7 @@ describe("canPerformOperation", () => {
     expect(result.allowed).toBe(false);
     expect(result.current).toBe(1000);
     expect(result.limit).toBe(1000);
-    expect(result.reason).toContain("1000");
+    expect(result.reason).toContain("1,000");
   });
 
   test("ENTERPRISE (unlimited): returns allowed:true without querying DB", async () => {

@@ -38,7 +38,7 @@ describe("meterOperation", () => {
     const result = await meterOperation("user-1", "FREE");
 
     expect(result.allowed).toBe(false);
-    expect(result.reason).toContain("1000");
+    expect(result.reason).toContain("1,000");
     expect(result.current).toBe(1000);
     expect(result.limit).toBe(1000);
     expect(prisma.usageRecord.upsert).not.toHaveBeenCalled();

@@ -80,7 +80,7 @@ export async function canPerformOperation(
   if (currentCount >= limit) {
     return {
       allowed: false,
-      reason: `Monthly operation limit of ${limit.toLocaleString()} reached for your ${tier} plan. Upgrade for more operations.`,
+      reason: `Monthly operation limit of ${limit.toLocaleString("en-US")} reached for your ${tier} plan. Upgrade for more operations.`,
       current: currentCount,
       limit,
     };
