@@ -53,6 +53,7 @@ import {
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -61,6 +62,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
@@ -130,9 +132,10 @@ export function AppSidebar() {
   const reorderBookmarks = useReorderBookmarks();
   const [activePin, setActivePin] = useState<BookmarkResponse | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { distance: 5 },
-  }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     const pin = bucketPins.find((p) => p.id === event.active.id);
@@ -231,7 +234,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <aside className="w-64 border-r bg-sidebar-background min-h-screen flex flex-col">
+      <aside aria-label="Sidebar" className="w-64 border-r bg-sidebar-background min-h-screen flex flex-col">
         <div className="h-14 px-4 border-b flex items-center">
           <Link
             href="/app/buckets"
@@ -247,6 +250,7 @@ export function AppSidebar() {
           <Link
             href="/app/buckets"
             onClick={handleBucketsClick}
+            aria-current={isBucketsActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               isBucketsActive
@@ -260,6 +264,7 @@ export function AppSidebar() {
 
           <Link
             href="/app/connections"
+            aria-current={isConnectionsActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               isConnectionsActive
@@ -273,6 +278,7 @@ export function AppSidebar() {
 
           <Link
             href="/app/shares"
+            aria-current={isSharesActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               isSharesActive
@@ -339,6 +345,7 @@ export function AppSidebar() {
                         <button
                           type="button"
                           onClick={() => toggleWorkspace(workspace.id)}
+                          aria-expanded={!isCollapsed}
                           className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-md text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground min-w-0"
                         >
                           {isCollapsed ? (
@@ -362,6 +369,7 @@ export function AppSidebar() {
                                   size="icon"
                                   className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
                                   title="Add to team"
+                                  aria-label="Add to team"
                                 >
                                   <Plus className="h-3.5 w-3.5" />
                                 </Button>
@@ -411,6 +419,7 @@ export function AppSidebar() {
                                 >
                                   <Link
                                     href={`/app/connections/${conn.id}?tab=overview`}
+                                    aria-current={isConnActive ? "page" : undefined}
                                     className="flex items-center gap-2 flex-1 min-w-0 px-3 py-1.5"
                                   >
                                     <Plug className="h-3 w-3 shrink-0" />
@@ -425,6 +434,7 @@ export function AppSidebar() {
                                           variant="ghost"
                                           size="icon"
                                           className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mr-1"
+                                          aria-label="Connection options"
                                         >
                                           <MoreHorizontal className="h-3 w-3" />
                                         </Button>
@@ -481,6 +491,7 @@ export function AppSidebar() {
         <div className="p-4 border-t space-y-1">
           <Link
             href="/app/settings"
+            aria-current={isSettingsActive && !isBillingActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               isSettingsActive && !isBillingActive
@@ -493,6 +504,7 @@ export function AppSidebar() {
           </Link>
           <Link
             href="/app/settings/billing"
+            aria-current={isBillingActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               isBillingActive
