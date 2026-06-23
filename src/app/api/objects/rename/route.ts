@@ -2,61 +2,46 @@ import { NextResponse } from "next/server";
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
 import { buildCopySource } from "@/lib/s3/copy-source";
-import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
-import { canManageFiles } from "@/lib/roles";
+import { requireConnectionAccess } from "@/lib/auth/require-connection-access";
 import { meterOperation } from "@/lib/subscriptions";
 import { recordActivity } from "@/lib/db/activity";
 import prisma from "@/lib/db/prisma";
 import { indexRename } from "@/lib/search/index-ops";
-
-interface RenameRequest {
-  connectionId: string;
-  bucket: string;
-  sourceKey: string;
-  targetKey: string;
-}
+import { RenameObjectRequest } from "@/lib/schemas/objects";
 
 export const POST = withAuth(async (req, { user }) => {
+  const parsed = RenameObjectRequest.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+      { status: 400 }
+    );
+  }
+  const { connectionId, bucket, sourceKey, targetKey } = parsed.data;
+
+  if (sourceKey === targetKey) {
+    return NextResponse.json({ success: true, skipped: true });
+  }
+
+  if (sourceKey.endsWith("/")) {
+    return NextResponse.json(
+      { error: "Folder rename is not supported in bulk operations" },
+      { status: 400 }
+    );
+  }
+
+  const result = await requireConnectionAccess(connectionId, user.id, "write");
+  if (result instanceof NextResponse) return result;
+  const { access } = result;
+
+  const tier = user.subscription?.tier ?? "FREE";
+  const meter = await meterOperation(user.id, tier);
+  if (!meter.allowed) {
+    return NextResponse.json({ error: meter.reason }, { status: 403 });
+  }
+
   try {
-    const { connectionId, bucket, sourceKey, targetKey }: RenameRequest =
-      await req.json();
-
-    if (!connectionId || !bucket || !sourceKey || !targetKey) {
-      return NextResponse.json(
-        { error: "connectionId, bucket, sourceKey, and targetKey are required" },
-        { status: 400 }
-      );
-    }
-
-    if (sourceKey === targetKey) {
-      return NextResponse.json({ success: true, skipped: true });
-    }
-
-    if (sourceKey.endsWith("/")) {
-      return NextResponse.json(
-        { error: "Folder rename is not supported in bulk operations" },
-        { status: 400 }
-      );
-    }
-
-    const access = await getConnectionAccessById(connectionId, user.id);
-    if (!access) {
-      return NextResponse.json({ error: "Connection not found" }, { status: 404 });
-    }
-    if (!canManageFiles(access.role)) {
-      return NextResponse.json(
-        { error: "You do not have permission to modify objects for this connection" },
-        { status: 403 }
-      );
-    }
-
-    const tier = user.subscription?.tier ?? "FREE";
-    const meter = await meterOperation(user.id, tier);
-    if (!meter.allowed) {
-      return NextResponse.json({ error: meter.reason }, { status: 403 });
-    }
-
     const client = createS3Client(access.connection);
 
     await client.send(

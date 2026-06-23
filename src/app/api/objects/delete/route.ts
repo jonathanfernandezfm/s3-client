@@ -1,50 +1,35 @@
 import { NextResponse } from "next/server";
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { createS3Client } from "@/lib/s3/client";
-import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
-import { canManageFiles } from "@/lib/roles";
+import { requireConnectionAccess } from "@/lib/auth/require-connection-access";
 import { meterOperation } from "@/lib/subscriptions";
 import { recordActivityBatch } from "@/lib/db/activity";
 import prisma from "@/lib/db/prisma";
 import { indexBulkDelete } from "@/lib/search/index-ops";
+import { DeleteObjectsRequest } from "@/lib/schemas/objects";
 
 export const POST = withAuth(async (req, { user }) => {
+  const parsed = DeleteObjectsRequest.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+      { status: 400 }
+    );
+  }
+  const { connectionId, bucket, keys } = parsed.data;
+
+  const result = await requireConnectionAccess(connectionId, user.id, "write");
+  if (result instanceof NextResponse) return result;
+  const { access } = result;
+
+  const tier = user.subscription?.tier ?? "FREE";
+  const meter = await meterOperation(user.id, tier);
+  if (!meter.allowed) {
+    return NextResponse.json({ error: meter.reason }, { status: 403 });
+  }
+
   try {
-    const {
-      connectionId,
-      bucket,
-      keys,
-    }: { connectionId: string; bucket: string; keys: string[] } =
-      await req.json();
-
-    if (!connectionId || !bucket || !keys || keys.length === 0) {
-      return NextResponse.json(
-        { error: "connectionId, bucket, and keys are required" },
-        { status: 400 }
-      );
-    }
-
-    const access = await getConnectionAccessById(connectionId, user.id);
-    if (!access) {
-      return NextResponse.json(
-        { error: "Connection not found" },
-        { status: 404 }
-      );
-    }
-    if (!canManageFiles(access.role)) {
-      return NextResponse.json(
-        { error: "You do not have permission to modify objects for this connection" },
-        { status: 403 }
-      );
-    }
-
-    const tier = user.subscription?.tier ?? "FREE";
-    const meter = await meterOperation(user.id, tier);
-    if (!meter.allowed) {
-      return NextResponse.json({ error: meter.reason }, { status: 403 });
-    }
-
     const client = createS3Client(access.connection);
     const command = new DeleteObjectsCommand({
       Bucket: bucket,

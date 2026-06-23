@@ -10,22 +10,13 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { createS3Client } from "@/lib/s3/client";
 import { buildCopySource } from "@/lib/s3/copy-source";
 import { buildFidelityParams, type SourceTag } from "@/lib/s3/copy-fidelity";
-import { getConnectionAccessById } from "@/lib/db/connections";
 import { withAuth } from "@/lib/auth";
-import { canManageFiles } from "@/lib/roles";
+import { requireConnectionAccess } from "@/lib/auth/require-connection-access";
 import { meterOperation } from "@/lib/subscriptions";
 import { recordActivityBatch } from "@/lib/db/activity";
 import prisma from "@/lib/db/prisma";
 import { indexBulkDelete, indexBulkUpsert } from "@/lib/search/index-ops";
-
-interface MoveRequest {
-  sourceConnectionId: string;
-  sourceBucket: string;
-  sourceKeys: string[];
-  targetConnectionId: string;
-  targetBucket: string;
-  targetPath: string;
-}
+import { MoveObjectsRequest } from "@/lib/schemas/objects";
 
 interface MoveResult {
   sourceKey: string;
@@ -36,6 +27,13 @@ interface MoveResult {
 
 export const POST = withAuth(async (req, { user }) => {
   try {
+    const parsed = MoveObjectsRequest.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+        { status: 400 }
+      );
+    }
     const {
       sourceConnectionId,
       sourceBucket,
@@ -43,47 +41,43 @@ export const POST = withAuth(async (req, { user }) => {
       targetConnectionId,
       targetBucket,
       targetPath,
-    }: MoveRequest = await req.json();
-
-    // Validate required fields
-    if (
-      !sourceConnectionId ||
-      !sourceBucket ||
-      !sourceKeys ||
-      sourceKeys.length === 0 ||
-      !targetConnectionId ||
-      !targetBucket
-    ) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Get connections and enforce permissions.
-    const sourceAccess = await getConnectionAccessById(sourceConnectionId, user.id);
-    const targetAccess = await getConnectionAccessById(targetConnectionId, user.id);
-
-    if (!sourceAccess) {
-      return NextResponse.json(
-        { error: "Source connection not found" },
-        { status: 404 }
-      );
+    // Move deletes from source after copy, so source also requires write.
+    const sourceResult = await requireConnectionAccess(sourceConnectionId, user.id, "write");
+    if (sourceResult instanceof NextResponse) {
+      // Preserve existing "Source connection not found" phrasing for 404;
+      // preserve "move objects between" phrasing for 403.
+      if (sourceResult.status === 404) {
+        return NextResponse.json({ error: "Source connection not found" }, { status: 404 });
+      }
+      if (sourceResult.status === 403) {
+        return NextResponse.json(
+          { error: "You do not have permission to move objects between these connections" },
+          { status: 403 }
+        );
+      }
+      return sourceResult;
     }
 
-    if (!targetAccess) {
-      return NextResponse.json(
-        { error: "Target connection not found" },
-        { status: 404 }
-      );
+    const targetResult = await requireConnectionAccess(targetConnectionId, user.id, "write");
+    if (targetResult instanceof NextResponse) {
+      // Distinguish target's 404; preserve "move objects between" phrasing for 403.
+      if (targetResult.status === 404) {
+        return NextResponse.json({ error: "Target connection not found" }, { status: 404 });
+      }
+      if (targetResult.status === 403) {
+        return NextResponse.json(
+          { error: "You do not have permission to move objects between these connections" },
+          { status: 403 }
+        );
+      }
+      return targetResult;
     }
 
-    if (!canManageFiles(sourceAccess.role) || !canManageFiles(targetAccess.role)) {
-      return NextResponse.json(
-        { error: "You do not have permission to move objects between these connections" },
-        { status: 403 }
-      );
-    }
+    const { access: sourceAccess } = sourceResult;
+    const { access: targetAccess } = targetResult;
 
     const tier = user.subscription?.tier ?? "FREE";
     const meter = await meterOperation(user.id, tier);
