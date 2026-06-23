@@ -7,6 +7,7 @@ import {
   buildSubscriptionUpdateFromDeleted,
   buildSubscriptionUpdateFromUpdated,
 } from "./handler";
+import { markWebhookProcessed } from "@/lib/db/webhook-events";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -21,6 +22,11 @@ export async function POST(req: NextRequest) {
     );
   } catch {
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
+  }
+
+  const dedup = await markWebhookProcessed("STRIPE", event.id, event.type);
+  if (dedup === "duplicate") {
+    return NextResponse.json({ received: true, duplicate: true });
   }
 
   try {

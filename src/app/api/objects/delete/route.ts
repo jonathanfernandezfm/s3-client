@@ -56,7 +56,7 @@ export const POST = withAuth(async (req, { user }) => {
 
     await client.send(command);
 
-    await recordActivityBatch({
+    const activityResult = await recordActivityBatch({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -65,6 +65,9 @@ export const POST = withAuth(async (req, { user }) => {
       bucket,
       items: keys.map((k) => ({ key: k })),
     });
+    if (!activityResult.ok) {
+      console.error("[activity] delete-route lost audit row", { connectionId, keys: keys.length, reason: activityResult.reason });
+    }
 
     await indexBulkDelete({ connectionId, bucket, keys });
 

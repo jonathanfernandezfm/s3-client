@@ -126,7 +126,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     description: typeof description === "string" ? description.trim() || null : null,
   });
 
-  await recordActivityWithBatch({
+  const activityResult = await recordActivityWithBatch({
     connectionId,
     userId: user.id,
     userDisplayName: displayName(user),
@@ -136,6 +136,9 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     key,
     batchId: typeof batchId === "string" ? batchId : null,
   });
+  if (!activityResult.ok) {
+    console.error("[activity] share-links-create-route lost audit row", { connectionId, bucket, key, reason: activityResult.reason });
+  }
 
   return NextResponse.json({
     shareLink: toResponse(created),

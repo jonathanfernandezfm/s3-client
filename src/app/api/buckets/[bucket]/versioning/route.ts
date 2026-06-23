@@ -73,7 +73,7 @@ export const PUT = withAuth<RouteContext>(async (req, { user, params }) => {
       }),
     );
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName:
@@ -82,6 +82,9 @@ export const PUT = withAuth<RouteContext>(async (req, { user, params }) => {
       action: statusToActivityAction(sdkStatus),
       bucket,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] bucket-versioning-route lost audit row", { connectionId, bucket, reason: activityResult.reason });
+    }
 
     return NextResponse.json({ success: true, status: sdkStatus });
   } catch (error) {

@@ -156,7 +156,7 @@ export const POST = withAuth(async (req, { user }) => {
     const batchId = crypto.randomUUID();
     const successfulResults = results.filter((r) => r.success);
     if (successfulResults.length > 0) {
-      await recordActivityBatch({
+      const activityResult1 = await recordActivityBatch({
         connectionId: sourceConnectionId,
         userId: user.id,
         userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -166,8 +166,11 @@ export const POST = withAuth(async (req, { user }) => {
         items: successfulResults.map((r) => ({ key: r.sourceKey, targetKey: null })),
         batchId,
       });
+      if (!activityResult1.ok) {
+        console.error("[activity] move-route lost audit row (source)", { connectionId: sourceConnectionId, bucket: sourceBucket, reason: activityResult1.reason });
+      }
       if (targetConnectionId !== sourceConnectionId) {
-        await recordActivityBatch({
+        const activityResult2 = await recordActivityBatch({
           connectionId: targetConnectionId,
           userId: user.id,
           userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -177,6 +180,9 @@ export const POST = withAuth(async (req, { user }) => {
           items: successfulResults.map((r) => ({ key: r.targetKey, targetKey: null })),
           batchId,
         });
+        if (!activityResult2.ok) {
+          console.error("[activity] move-route lost audit row (target)", { connectionId: targetConnectionId, bucket: targetBucket, reason: activityResult2.reason });
+        }
       }
     }
 

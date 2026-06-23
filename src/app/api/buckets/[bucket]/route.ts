@@ -39,7 +39,7 @@ export const DELETE = withAuth<RouteContext>(async (req, { user, params }) => {
     const command = new DeleteBucketCommand({ Bucket: bucket });
     await client.send(command);
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -47,6 +47,9 @@ export const DELETE = withAuth<RouteContext>(async (req, { user, params }) => {
       action: "BUCKET_DELETE",
       bucket,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] buckets-delete-route lost audit row", { connectionId, bucket, reason: activityResult.reason });
+    }
 
     await indexDeleteBucket({ connectionId, bucket });
 

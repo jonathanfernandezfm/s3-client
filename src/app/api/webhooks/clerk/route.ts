@@ -2,13 +2,14 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import prisma from "@/lib/db/prisma";
+import { markWebhookProcessed } from "@/lib/db/webhook-events";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
     throw new Error("Missing CLERK_WEBHOOK_SECRET environment variable");
-  } 
+  }
 
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
@@ -38,6 +39,13 @@ export async function POST(req: Request) {
 
   const eventType = evt.type;
 
+  const dedup = await markWebhookProcessed("CLERK", svix_id, eventType);
+  if (dedup === "duplicate") {
+    return new Response("Already processed", { status: 200 });
+  }
+
+  console.log("[clerk-webhook]", { svixId: svix_id, eventType });
+
   switch (eventType) {
     case "user.created": {
       const { id, email_addresses, first_name, last_name, image_url } =
@@ -46,9 +54,9 @@ export async function POST(req: Request) {
         (e) => e.id === evt.data.primary_email_address_id
       );
 
-      // Create user with FREE subscription
-      await prisma.user.create({
-        data: {
+      await prisma.user.upsert({
+        where: { clerkId: id },
+        create: {
           clerkId: id,
           email: primaryEmail?.email_address ?? "",
           firstName: first_name,
@@ -65,6 +73,12 @@ export async function POST(req: Request) {
             },
           },
         },
+        update: {
+          email: primaryEmail?.email_address ?? undefined,
+          firstName: first_name,
+          lastName: last_name,
+          imageUrl: image_url,
+        },
       });
       break;
     }
@@ -76,10 +90,27 @@ export async function POST(req: Request) {
         (e) => e.id === evt.data.primary_email_address_id
       );
 
-      await prisma.user.update({
+      await prisma.user.upsert({
         where: { clerkId: id },
-        data: {
-          email: primaryEmail?.email_address,
+        create: {
+          clerkId: id,
+          email: primaryEmail?.email_address ?? "",
+          firstName: first_name,
+          lastName: last_name,
+          imageUrl: image_url,
+          personalWorkspace: {
+            create: {
+              type: "PERSONAL",
+            },
+          },
+          subscription: {
+            create: {
+              tier: "FREE",
+            },
+          },
+        },
+        update: {
+          email: primaryEmail?.email_address ?? undefined,
           firstName: first_name,
           lastName: last_name,
           imageUrl: image_url,
@@ -92,9 +123,7 @@ export async function POST(req: Request) {
       const { id } = evt.data;
       if (id) {
         // Cascade delete will handle subscription, connections, and usage records
-        await prisma.user.delete({
-          where: { clerkId: id },
-        });
+        await prisma.user.deleteMany({ where: { clerkId: id } });
       }
       break;
     }

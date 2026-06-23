@@ -134,7 +134,7 @@ export const DELETE = withAuth<RouteContext>(async (req, { user, params }) => {
       .map((r) => ({ key: r.key }));
 
     if (successfulItems.length > 0) {
-      await recordActivityBatch({
+      const activityResult = await recordActivityBatch({
         connectionId,
         userId: user.id,
         userDisplayName:
@@ -144,6 +144,9 @@ export const DELETE = withAuth<RouteContext>(async (req, { user, params }) => {
         bucket,
         items: successfulItems,
       });
+      if (!activityResult.ok) {
+        console.error("[activity] multipart-abort-route lost audit row", { connectionId, bucket, reason: activityResult.reason });
+      }
     }
 
     return NextResponse.json({ results });

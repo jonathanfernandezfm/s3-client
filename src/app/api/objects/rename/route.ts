@@ -70,7 +70,7 @@ export const POST = withAuth(async (req, { user }) => {
       new DeleteObjectCommand({ Bucket: bucket, Key: sourceKey })
     );
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -80,6 +80,9 @@ export const POST = withAuth(async (req, { user }) => {
       key: sourceKey,
       targetKey,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] rename-route lost audit row", { connectionId, bucket, key: sourceKey, reason: activityResult.reason });
+    }
 
     await indexRename({
       workspaceId: access.workspaceId,

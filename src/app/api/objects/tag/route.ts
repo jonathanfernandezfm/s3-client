@@ -59,7 +59,7 @@ export const POST = withAuth(async (req, { user }) => {
       })
     );
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
@@ -68,6 +68,9 @@ export const POST = withAuth(async (req, { user }) => {
       bucket,
       key,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] tag-route lost audit row", { connectionId, bucket, key, reason: activityResult.reason });
+    }
 
     const nextTags = tags.map((t) => t.value);
     await indexUpdateTags({ connectionId, bucket, key, tags: nextTags });

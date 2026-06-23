@@ -78,7 +78,7 @@ export const POST = withAuth(async (req, { user }) => {
       }),
     );
 
-    await recordActivity({
+    const activityResult = await recordActivity({
       connectionId,
       userId: user.id,
       userDisplayName:
@@ -88,6 +88,9 @@ export const POST = withAuth(async (req, { user }) => {
       bucket: targetBucket,
       key: targetKey,
     });
+    if (!activityResult.ok) {
+      console.error("[activity] versions-copy-route lost audit row", { connectionId, bucket: targetBucket, key: targetKey, reason: activityResult.reason });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
