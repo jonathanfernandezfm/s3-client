@@ -82,10 +82,12 @@ model User {
   subscription Subscription?
 
   // Workspace and team relationships
-  personalWorkspace  Workspace?
-  teamMemberships    TeamMember[]
-  createdTeams       Team[]       @relation("TeamCreator")
-  createdConnections Connection[] @relation("ConnectionCreator")
+  personalWorkspace   Workspace?
+  teamMemberships     TeamMember[]
+  createdTeams        Team[]           @relation("TeamCreator")
+  createdConnections  Connection[]     @relation("ConnectionCreator")
+  createdInvitations  TeamInvitation[] @relation("TeamInvitationCreator")
+  acceptedInvitations TeamInvitation[] @relation("TeamInvitationAcceptor")
 
   // Usage tracking
   usageRecords UsageRecord[]
@@ -145,13 +147,14 @@ model UsageRecord {
 }
 
 model Team {
-  id          String       @id @default(uuid())
+  id          String           @id @default(uuid())
   name        String
-  slug        String       @unique
+  slug        String           @unique
   createdById String
-  createdBy   User         @relation("TeamCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User             @relation("TeamCreator", fields: [createdById], references: [id], onDelete: Cascade)
   members     TeamMember[]
   workspace   Workspace?
+  invitations TeamInvitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -453,6 +456,26 @@ model CrawlJob {
   @@index([connectionId, kind, status])
   @@index([status, lastTickAt])
   @@map("crawl_jobs")
+}
+
+model TeamInvitation {
+  id          String    @id @default(uuid())
+  teamId      String
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  role        TeamRole  @default(VIEWER)
+  token       String    @unique
+  email       String?
+  createdById String
+  createdBy   User      @relation("TeamInvitationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  acceptedById String?
+  acceptedBy   User?    @relation("TeamInvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([teamId])
+  @@map("team_invitations")
 }
 
 enum WebhookSource {

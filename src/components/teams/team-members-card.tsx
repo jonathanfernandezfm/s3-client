@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, MoreVertical, Pencil, Plus, Shield, User } from "lucide-react";
-import type { TeamDetail } from "@/lib/queries/teams";
+import { Copy, Link, Loader2, MoreVertical, Pencil, Plus, Shield, Trash2, User } from "lucide-react";
+import type { TeamDetail, TeamInvite, CreatedInvite } from "@/lib/queries/teams";
 import type { Role } from "@/lib/roles";
 
 interface TeamMembersCardProps {
@@ -30,6 +30,21 @@ interface TeamMembersCardProps {
   onAddMember: (data: { email: string; role: Role }) => Promise<void>;
   onUpdateRole: (memberId: string, role: Role) => Promise<void>;
   onRemoveMember: (memberId: string) => Promise<void>;
+  // Invite props (optional so the card degrades if not wired up)
+  invites?: TeamInvite[];
+  isCreatingInvite?: boolean;
+  isRevokingInvite?: boolean;
+  onCreateInvite?: (data: { role: Role }) => Promise<CreatedInvite>;
+  onRevokeInvite?: (inviteId: string) => Promise<void>;
+  onCopyUrl?: (url: string) => void;
+}
+
+function relativeExpiry(expiresAt: string): string {
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "expired";
+  if (days === 1) return "expires in 1 day";
+  return `expires in ${days} days`;
 }
 
 export function TeamMembersCard({
@@ -41,9 +56,17 @@ export function TeamMembersCard({
   onAddMember,
   onUpdateRole,
   onRemoveMember,
+  invites = [],
+  isCreatingInvite = false,
+  isRevokingInvite = false,
+  onCreateInvite,
+  onRevokeInvite,
+  onCopyUrl,
 }: TeamMembersCardProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("VIEWER");
+  const [inviteRole, setInviteRole] = useState<Role>("VIEWER");
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +74,19 @@ export function TeamMembersCard({
     await onAddMember({ email: email.trim(), role });
     setEmail("");
     setRole("VIEWER");
+  };
+
+  const handleCreateInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onCreateInvite) return;
+    const created = await onCreateInvite({ role: inviteRole });
+    setCreatedInviteUrl(created.url);
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      onCopyUrl?.(url);
+    });
   };
 
   return (
@@ -96,6 +132,105 @@ export function TeamMembersCard({
               </Button>
             </div>
           </form>
+        )}
+
+        {canManage && onCreateInvite && (
+          <div className="space-y-3 rounded-lg border p-3">
+            <p className="text-sm font-medium">Create invite link</p>
+            <form onSubmit={handleCreateInvite} className="flex items-end gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="invite-role" className="text-xs">
+                  Role
+                </Label>
+                <select
+                  id="invite-role"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as Role)}
+                  className="h-9 w-32"
+                >
+                  <option value="VIEWER">Viewer</option>
+                  <option value="EDITOR">Editor</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <Button type="submit" variant="outline" disabled={isCreatingInvite} className="h-9">
+                {isCreatingInvite ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link className="h-4 w-4" />
+                )}
+                Generate
+              </Button>
+            </form>
+
+            {createdInviteUrl && (
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={createdInviteUrl}
+                  className="text-xs font-mono"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => handleCopyLink(createdInviteUrl)}
+                >
+                  <Copy className="h-4 w-4" />
+                  <span className="sr-only">Copy invite link</span>
+                </Button>
+              </div>
+            )}
+
+            {invites.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Pending invites</p>
+                {invites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-medium">{invite.role}</span>
+                      {invite.email && (
+                        <span className="ml-1 text-muted-foreground">
+                          ({invite.email})
+                        </span>
+                      )}
+                      <span className="ml-1 text-muted-foreground">
+                        &mdash; {relativeExpiry(invite.expiresAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleCopyLink(invite.url)}
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span className="sr-only">Copy invite link</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive"
+                        disabled={isRevokingInvite}
+                        onClick={() => onRevokeInvite?.(invite.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span className="sr-only">Revoke invite</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="space-y-2">

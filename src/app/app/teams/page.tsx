@@ -11,6 +11,10 @@ import {
   useRenameTeam,
   useDeleteTeam,
   useLeaveTeam,
+  useTeamInvites,
+  useCreateInvite,
+  useRevokeInvite,
+  type CreatedInvite,
 } from "@/lib/queries/teams";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { usePaletteIntentStore } from "@/lib/stores/palette-intent-store";
@@ -79,6 +83,11 @@ function TeamsContent() {
   const renameTeam = useRenameTeam(selectedTeamId);
   const deleteTeam = useDeleteTeam();
   const leaveTeam = useLeaveTeam(selectedTeamId);
+  const { data: invites = [] } = useTeamInvites(
+    team?.role === "ADMIN" ? selectedTeamId : null
+  );
+  const createInvite = useCreateInvite(selectedTeamId);
+  const revokeInvite = useRevokeInvite(selectedTeamId);
 
   // Rename dialog state
   const [renameOpen, setRenameOpen] = useState(false);
@@ -220,6 +229,46 @@ function TeamsContent() {
     }
   };
 
+  const handleCreateInvite = async (data: { role: Role }): Promise<CreatedInvite> => {
+    try {
+      const created = await createInvite.mutateAsync(data);
+      addNotification({
+        type: "info",
+        title: "Invite link created",
+        description: "Share the link with your colleague.",
+        status: "completed",
+      });
+      return created;
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Failed to create invite link",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+      throw error;
+    }
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    try {
+      await revokeInvite.mutateAsync(inviteId);
+      addNotification({
+        type: "delete",
+        title: "Invite revoked",
+        description: "The invite link has been revoked.",
+        status: "completed",
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Failed to revoke invite",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+    }
+  };
+
   const handleLeaveConfirm = async () => {
     if (!team || !selectedTeamId) return;
     try {
@@ -241,6 +290,15 @@ function TeamsContent() {
         status: "error",
       });
     }
+  };
+
+  const handleCopyInviteUrl = (_url: string) => {
+    addNotification({
+      type: "info",
+      title: "Link copied",
+      description: "Invite link copied to clipboard.",
+      status: "completed",
+    });
   };
 
   if (isLoading) return null;
@@ -375,6 +433,12 @@ function TeamsContent() {
               onAddMember={handleAddMember}
               onUpdateRole={handleUpdateRole}
               onRemoveMember={handleRemoveMember}
+              invites={invites}
+              isCreatingInvite={createInvite.isPending}
+              isRevokingInvite={revokeInvite.isPending}
+              onCreateInvite={handleCreateInvite}
+              onRevokeInvite={handleRevokeInvite}
+              onCopyUrl={handleCopyInviteUrl}
             />
           </>
         )}

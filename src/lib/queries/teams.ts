@@ -33,10 +33,28 @@ export interface TeamDetail {
   members: TeamMember[];
 }
 
+export interface TeamInvite {
+  id: string;
+  role: Role;
+  email: string | null;
+  url: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface CreatedInvite {
+  id: string;
+  role: Role;
+  token: string;
+  url: string;
+  expiresAt: string;
+}
+
 const teamKeys = {
   all: ["teams"] as const,
   list: () => [...teamKeys.all, "list"] as const,
   detail: (teamId: string) => [...teamKeys.all, "detail", teamId] as const,
+  invites: (teamId: string) => [...teamKeys.all, "invites", teamId] as const,
 };
 
 async function fetchTeams(): Promise<TeamSummary[]> {
@@ -252,6 +270,80 @@ export function useLeaveTeam(teamId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+}
+
+async function fetchTeamInvites(teamId: string): Promise<TeamInvite[]> {
+  const response = await fetch(`/api/teams/${teamId}/invites`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to fetch invites");
+  }
+  return response.json();
+}
+
+async function createInvite(
+  teamId: string,
+  data: { role: Role; email?: string }
+): Promise<CreatedInvite> {
+  const response = await fetch(`/api/teams/${teamId}/invites`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create invite");
+  }
+  return response.json();
+}
+
+async function revokeInvite(
+  teamId: string,
+  inviteId: string
+): Promise<{ success: boolean }> {
+  const response = await fetch(`/api/teams/${teamId}/invites/${inviteId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to revoke invite");
+  }
+  return response.json();
+}
+
+export function useTeamInvites(teamId: string | null) {
+  return useQuery({
+    queryKey: teamId ? teamKeys.invites(teamId) : [...teamKeys.all, "invites", "none"],
+    queryFn: () => fetchTeamInvites(teamId!),
+    enabled: !!teamId,
+  });
+}
+
+export function useCreateInvite(teamId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { role: Role; email?: string }) =>
+      createInvite(teamId!, data),
+    onSuccess: () => {
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.invites(teamId) });
+      }
+    },
+  });
+}
+
+export function useRevokeInvite(teamId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (inviteId: string) => revokeInvite(teamId!, inviteId),
+    onSuccess: () => {
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.invites(teamId) });
+      }
     },
   });
 }
