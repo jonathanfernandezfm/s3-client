@@ -28,6 +28,7 @@ export interface TeamDetail {
   name: string;
   slug: string;
   role: Role;
+  currentMemberId: string;
   workspaceId: string;
   members: TeamMember[];
 }
@@ -187,6 +188,70 @@ export function useRemoveTeamMember(teamId: string | null) {
         queryClient.invalidateQueries({ queryKey: teamKeys.detail(teamId) });
       }
       queryClient.invalidateQueries({ queryKey: teamKeys.list() });
+    },
+  });
+}
+
+async function renameTeam(teamId: string, name: string): Promise<{ id: string; name: string }> {
+  const response = await fetch(`/api/teams/${teamId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to rename team");
+  }
+
+  return response.json();
+}
+
+async function deleteTeam(teamId: string): Promise<{ success: boolean }> {
+  const response = await fetch(`/api/teams/${teamId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to delete team");
+  }
+
+  return response.json();
+}
+
+export function useRenameTeam(teamId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) => renameTeam(teamId!, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+}
+
+export function useDeleteTeam() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (teamId: string) => deleteTeam(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+}
+
+export function useLeaveTeam(teamId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (memberId: string) => removeTeamMember(teamId!, memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     },
   });
 }

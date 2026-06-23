@@ -16,7 +16,7 @@ import {
 import { Loader2, Plus } from "lucide-react";
 
 interface CreateTeamDialogProps {
-  onCreate: (data: { name: string; slug?: string }) => Promise<void>;
+  onCreate: (data: { name: string }) => Promise<void>;
   isPending: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -38,7 +38,6 @@ export function CreateTeamDialog({
   };
 
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +46,9 @@ export function CreateTeamDialog({
     try {
       await onCreate({
         name: name.trim(),
-        slug: slug.trim() || undefined,
       });
 
       setName("");
-      setSlug("");
       setOpen(false);
     } catch {
       // parent handler shows error toast
@@ -85,15 +82,6 @@ export function CreateTeamDialog({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Platform Team"
                 required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="team-slug">Slug (optional)</Label>
-              <Input
-                id="team-slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="platform-team"
               />
             </div>
           </div>

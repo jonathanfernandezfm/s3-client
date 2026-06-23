@@ -1,14 +1,13 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Glow } from "./primitives/glow";
 import { GridBg } from "./primitives/grid-bg";
 import { AppWindow } from "./mocks/app-window";
 import { FileGrid, type FileItem } from "./mocks/file-grid";
-import { VideoModal } from "./video-modal";
 import { useReducedMotionSafe } from "./primitives/use-reduced-motion-safe";
 
 const HEADLINE = ["S3,", "finally", "usable."];
@@ -26,7 +25,6 @@ const HERO_FILES: FileItem[] = [
 
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
-  const [videoOpen, setVideoOpen] = useState(false);
   const reduced = useReducedMotionSafe();
 
   const { scrollYProgress } = useScroll({
@@ -92,13 +90,13 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.62 }}
           className="mt-8 flex items-center gap-3"
         >
-          <button
-            onClick={() => setVideoOpen(true)}
+          <Link
+            href="/sign-up"
             className="flex items-center gap-2 rounded-full bg-[var(--accent-amber)] px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
           >
-            <Play className="size-4" />
-            Watch the demo
-          </button>
+            Get started
+            <ArrowRight className="size-4" />
+          </Link>
           <Link
             href="/sign-up"
             className="flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm text-white/80 transition-colors hover:border-white/30 hover:text-white"
@@ -116,28 +114,13 @@ export function Hero() {
         style={reduced ? undefined : { y: tileY, scale: tileScale }}
         className="relative z-10 mt-14 w-full max-w-4xl"
       >
-        <button
-          onClick={() => setVideoOpen(true)}
-          aria-label="Play the S3 Dock demo video"
-          className="group relative block w-full cursor-pointer text-left"
+        <AppWindow
+          title="s3dock.app — demo"
+          className="shadow-[0_40px_120px_var(--accent-amber-glow)]"
         >
-          <AppWindow
-            title="s3dock.app — demo"
-            className="shadow-[0_40px_120px_var(--accent-amber-glow)]"
-          >
-            <div className="relative">
-              <FileGrid items={HERO_FILES} className="py-6 opacity-80" />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/20">
-                <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-black shadow-xl transition-transform group-hover:scale-110">
-                  <Play className="ml-1 size-6" />
-                </span>
-              </div>
-            </div>
-          </AppWindow>
-        </button>
+          <FileGrid items={HERO_FILES} className="py-6 opacity-80" />
+        </AppWindow>
       </motion.div>
-
-      <VideoModal open={videoOpen} onOpenChange={setVideoOpen} />
     </section>
   );
 }

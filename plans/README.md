@@ -26,6 +26,19 @@ presign, share links); 019–022 close the highest-leverage remaining gaps.
 Independent of all prior plans and of each other (019/022 are client-only;
 020/021 touch object routes but different files).
 
+Plans 047–050 were authored on 2026-06-23 at commit `c0e3376` from an
+`/improve` **release-readiness + Teams feature** session. The owner wants to
+release publicly soon and asked specifically about Teams UI/UX/structure. Two
+parallel audit subagents (release breadth + Teams/workspace integration trace)
+were run and **vetted against live code** — several over-reports were corrected
+(see "Release-readiness session — considered and rejected" below). The four
+selected plans: **047** eager env validation at startup, **048** error
+boundaries + 404 page, **049** team invite-links MVP (the headline Teams gap —
+there is currently no way to invite a not-yet-registered colleague), **050**
+Teams UX polish bundle. The owner chose a **minimal invite-link MVP** (no email
+infra) for 049. 049 and 050 both edit `team-members-card.tsx` + the teams page —
+soft-coordinate (drift-check + rebase the shared file; land either first).
+
 The browser-url refactor (`browserRouteHref` / `parentPrefix`), toast-to-NotificationStore
 migration (removes shadcn toast stack; unifies all in-app feedback through
 `useNotificationStore`), and minor UX improvements (filter-bar polish, breadcrumb
@@ -70,22 +83,26 @@ and update your row when done.
 | 028  | Export the activity log to CSV | P2 | M | — | DONE (PR #32) |
 | 029  | Break bucket storage stats down by file type + largest objects | P2 | M | — | DONE (PR #31) |
 | 030  | Repair object-route tests that break on the `{ ok }` activity contract | P0 | S | — | DONE (PR #38) — also fixed a pre-existing locale test bug + CI Clerk-key build failure; restored green CI baseline |
-| 031  | Stop dropping webhook events on handler failure; record `invoice.payment_failed` | P1 | M | — | PR OPEN (#40) — rebased on main, CI green |
-| 032  | Batch reconcile-cron recency check + resolve bookmark access once per connection | P2 | M | — | PR OPEN (#41) — rebased on main, CI green |
-| 033  | Right-click context menu on file rows + clear-filter empty-state affordance | P2 | S | — | PR OPEN (#39) — rebased on main, CI green; manual browser smoke still pending |
-| 034  | Arrow-key / Enter / Delete keyboard navigation in the file list | P3 | M | — | PR OPEN (#42) — rebased on main, CI green; manual browser smoke pending; re-run drift check after 033 lands (shared file-row/file-list edits) |
-| 035  | Design spike: team invitations for not-yet-registered users | P2 | M | — | PR OPEN (#43) — rebased on main, CI green; spec only, awaiting review |
-| 036  | App shell: skip-to-content link, focusable/labeled `<main>`, focus-move-to-main on client navigation | P2 | M | — | TODO |
-| 037  | Sidebar a11y: aria-current, aria-expanded, `<aside>` label, keyboard bookmark reorder, icon-button names | P2 | S | — | TODO |
-| 038  | Breadcrumb a11y: nav label, `<ol>`/`<li>` semantics, aria-current, icon-button names | P2 | S | — | TODO |
-| 039  | WAI-ARIA tabs + arrow-key nav for bucket- and connection-detail tab bars | P2 | M | — | TODO |
-| 040  | Drawer dialog semantics + focus-on-open/restore (properties + info drawers) | P2 | M | — | TODO |
+| 031  | Stop dropping webhook events on handler failure; record `invoice.payment_failed` | P1 | M | — | DONE (PR #40) |
+| 032  | Batch reconcile-cron recency check + resolve bookmark access once per connection | P2 | M | — | DONE (PR #41) |
+| 033  | Right-click context menu on file rows + clear-filter empty-state affordance | P2 | S | — | DONE (PR #39) |
+| 034  | Arrow-key / Enter / Delete keyboard navigation in the file list | P3 | M | — | DONE (PR #42) |
+| 035  | Design spike: team invitations for not-yet-registered users | P2 | M | — | DONE (PR #43) |
+| 036  | App shell: skip-to-content link, focusable/labeled `<main>`, focus-move-to-main on client navigation | P2 | M | — | DONE (PR #45) |
+| 037  | Sidebar a11y: aria-current, aria-expanded, `<aside>` label, keyboard bookmark reorder, icon-button names | P2 | S | — | DONE (PR #47) |
+| 038  | Breadcrumb a11y: nav label, `<ol>`/`<li>` semantics, aria-current, icon-button names | P2 | S | — | DONE (PR #46) |
+| 039  | WAI-ARIA tabs + arrow-key nav for bucket- and connection-detail tab bars | P2 | M | — | DONE (PR #50) |
+| 040  | Drawer dialog semantics + focus-on-open/restore (properties + info drawers) | P2 | M | — | DONE (PR #51) |
 | 041  | Announce notifications via ARIA live region; name the dismiss button | P2 | S | — | DONE |
 | 042  | Add accessible names to icon-only buttons in bucket grid and pane tab bar | P3 | S | — | DONE |
 | 043  | Resolve connection list access in one query; stop decrypting secrets the list never returns | P1 | M | — | DONE |
 | 044  | Memoize derived object lists (folderKeys/fileKeys/visibleObjects/displayedObjects + bulk-ops selection) in the file browser | P2 | S | — | DONE |
 | 045  | Memoize the gallery `FileTile` + pass stable callbacks, matching the memoized list `FileRow` | P2 | M | — | DONE |
 | 046  | Scope note & share-link mutation invalidations to the affected `(connectionId, bucket)` | P3 | M | — | DONE |
+| 047  | Validate all required environment variables at server startup | P1 | S | — | TODO |
+| 048  | Add branded error boundaries and a 404 page | P1 | S | — | TODO |
+| 049  | Team invitation links (MVP) — onboard members who haven't signed up yet | P1 | M | — | TODO |
+| 050  | Teams UX polish — styled role select, rename/delete/leave, declutter, hide "coming soon" | P2 | M | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
@@ -168,6 +185,19 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   "In-pane name filter" → 026, "Upload conflict handling = silent overwrite" →
   027, and the `/improve next` "Storage analytics" gap → 029.
 
+- 047–050 were authored on 2026-06-23 at commit `c0e3376` from an `/improve`
+  release-readiness + Teams session. All four are independent of plans 001–046.
+  **047 and 048** are pure pre-release polish, dependency-free, parallelizable,
+  and low-risk — ship them first/whenever. **049** adds a Prisma migration
+  (`team_invitations` table) and is the highest-value item for the Teams
+  proposition (today an admin cannot invite anyone who hasn't already signed up
+  independently). **050** is UX polish for Teams. **049 and 050 both edit
+  `src/components/teams/team-members-card.tsx` and `src/app/app/teams/page.tsx`**
+  — they have no logical dependency, but the second to land must re-run its
+  drift check and rebase those shared files; reuse 050's styled `<select>` for
+  049's invite role picker if 050 landed first. Suggested order: 047, 048
+  (quick wins) → 049 (headline) → 050 (polish).
+
 ## Verification baseline (HEAD `49a31e0`, post-003/004)
 
 Plans 003 (PR #16) and 004 (PR #19) have landed. The active gate is:
@@ -186,6 +216,51 @@ pnpm test && pnpm typecheck && pnpm lint && pnpm audit --prod --audit-level=high
 
 The "no *new* findings vs. pre-edit baseline" workaround used in plans 019–029
 (authored before 003 landed) is no longer needed for new plans.
+
+## Release-readiness session — considered and rejected / deferred (2026-06-23, `c0e3376`)
+
+Two audit subagents over-reported; these were vetted against live code and
+**not** turned into plans (so nobody re-audits them):
+
+- **"Team members don't share notes"** — FALSE. `FileNote`
+  (`prisma/schema.prisma:274`) is scoped by `connectionId`+`bucket`+`key` with
+  `authorId`/`authorDisplayName`, so all members with connection access see the
+  same notes with attribution. Notes collaboration already works.
+- **"Last admin can orphan the team by leaving/demoting"** — FALSE. Guarded:
+  `members/[memberId]/route.ts:39-47,74-82` count admins and return 400 when
+  `<= 1`.
+- **"`getRoleForWorkspace` reads `members[0]` — possible privilege bug"** —
+  FALSE. The populating query filters `members: { where: { userId }, take: 1 }`
+  (`connections.ts:66-69`), so `members[0]` is always the calling user.
+- **"Connections are a flat, unusable merged view across teams"** — overstated.
+  `app-sidebar.tsx:332-488` groups connections under each workspace (Team
+  workspaces get a Users icon, collapsible). Team connections are visible and
+  usable to members per their role. The lack of a single "active workspace"
+  focus mode is a design choice, not a bug — not planned.
+- **"Role checks defined but maybe not wired"** — FALSE. `requireConnectionAccess`
+  / `getConnectionAccessById` gate every state-changing object/bucket/note/share
+  route (verified across ~50 files). VIEWER is blocked from writes; infra ops are
+  ADMIN-only.
+- **Bookmarks are per-user** (`Bookmark.userId`, `schema:256`), and **activity
+  is per-user** — by design (each member tracks their own pins/history). Worth a
+  one-line doc someday, not a release blocker; not planned.
+- **`Team.slug` is generated but unused by any route** — real but harmless. Plan
+  050 removes the confusing slug *input* from the create dialog but keeps the
+  `@unique` column (removing it is a migration with no upside; reserved for a
+  future human-readable-URL/invite-slug feature).
+- **No `src/middleware.ts` (edge auth guard)** — real (auth is per-route
+  `withAuth`, correct everywhere today) but it's defense-in-depth, not a current
+  hole. Deferred — revisit if route count grows or a public-by-default mistake
+  appears.
+- **"No Dockerfile / deploy config"** — the repo deploys without Docker
+  (`start` script runs `prisma migrate deploy && next start`). Only a blocker if
+  the chosen host needs Docker; that's an ops decision, not a code finding. Not
+  planned.
+- **React Compiler "Compilation Skipped" warning on `useVirtualizer`** — a
+  warning, not an error; current behavior is correct. Not planned.
+- **Share-link `expiresIn`/`maxUses` lack explicit bounds** — DB constraints
+  catch invalid values; worst case is a noisy validation error, not a security
+  hole. Low value; not planned.
 
 ## Findings considered and rejected (do not re-audit)
 

@@ -60,15 +60,17 @@ export const PATCH = withAuth<RouteContext>(async (req, { user, params }) => {
 
 export const DELETE = withAuth<RouteContext>(async (_req, { user, params }) => {
   const { teamId, memberId } = params;
-  const canManage = await isTeamAdmin(teamId, user.id);
-
-  if (!canManage) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const member = await prisma.teamMember.findUnique({ where: { id: memberId } });
   if (!member || member.teamId !== teamId) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
+
+  const isSelf = member.userId === user.id;
+  const canManage = await isTeamAdmin(teamId, user.id);
+
+  if (!canManage && !isSelf) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (member.role === "ADMIN") {

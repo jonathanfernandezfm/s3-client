@@ -8,13 +8,34 @@ import {
   useAddTeamMember,
   useUpdateTeamMemberRole,
   useRemoveTeamMember,
+  useRenameTeam,
+  useDeleteTeam,
+  useLeaveTeam,
 } from "@/lib/queries/teams";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { usePaletteIntentStore } from "@/lib/stores/palette-intent-store";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamMembersCard } from "@/components/teams/team-members-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, MoreVertical, Pencil, Trash2, LogOut } from "lucide-react";
 import { useTier } from "@/hooks/use-tier";
 import { LockedPageOverlay } from "@/components/billing/locked-page-overlay";
 import type { Role } from "@/lib/roles";
@@ -55,8 +76,21 @@ function TeamsContent() {
   const addMember = useAddTeamMember(selectedTeamId);
   const updateRole = useUpdateTeamMemberRole(selectedTeamId);
   const removeMember = useRemoveTeamMember(selectedTeamId);
+  const renameTeam = useRenameTeam(selectedTeamId);
+  const deleteTeam = useDeleteTeam();
+  const leaveTeam = useLeaveTeam(selectedTeamId);
 
-  const handleCreateTeam = async (data: { name: string; slug?: string }) => {
+  // Rename dialog state
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameName, setRenameName] = useState("");
+
+  // Delete confirmation state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Leave confirmation state
+  const [leaveOpen, setLeaveOpen] = useState(false);
+
+  const handleCreateTeam = async (data: { name: string }) => {
     try {
       const created = await createTeam.mutateAsync(data);
       setSelectedTeamId(created.id);
@@ -131,6 +165,78 @@ function TeamsContent() {
       addNotification({
         type: "error",
         title: "Failed to remove member",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+    }
+  };
+
+  const handleRenameOpen = () => {
+    setRenameName(team?.name ?? "");
+    setRenameOpen(true);
+  };
+
+  const handleRenameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameName.trim()) return;
+    try {
+      await renameTeam.mutateAsync(renameName.trim());
+      setRenameOpen(false);
+      addNotification({
+        type: "info",
+        title: "Team renamed",
+        description: `Team is now called "${renameName.trim()}".`,
+        status: "completed",
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Failed to rename team",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedTeamId) return;
+    try {
+      await deleteTeam.mutateAsync(selectedTeamId);
+      setDeleteOpen(false);
+      setSelectedTeamId(null);
+      addNotification({
+        type: "delete",
+        title: "Team deleted",
+        description: "The team and all its connections have been permanently deleted.",
+        status: "completed",
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Failed to delete team",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+    }
+  };
+
+  const handleLeaveConfirm = async () => {
+    if (!team || !selectedTeamId) return;
+    try {
+      await leaveTeam.mutateAsync(team.currentMemberId);
+      setLeaveOpen(false);
+      setSelectedTeamId(null);
+      addNotification({
+        type: "delete",
+        title: "Left team",
+        description: "You have left the team.",
+        status: "completed",
+      });
+    } catch (error) {
+      setLeaveOpen(false);
+      addNotification({
+        type: "error",
+        title: "Failed to leave team",
         error: error instanceof Error ? error.message : "Unknown error",
         status: "error",
       });
@@ -214,10 +320,49 @@ function TeamsContent() {
           <>
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">{team.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Role: {team.role}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-2xl">{team.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Role: {team.role}
+                    </p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Team actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {team.role === "ADMIN" && (
+                        <DropdownMenuItem onClick={handleRenameOpen}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Rename team
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setLeaveOpen(true)}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Leave team
+                      </DropdownMenuItem>
+                      {team.role === "ADMIN" && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteOpen(true)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete team
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </CardHeader>
             </Card>
 
@@ -234,6 +379,89 @@ function TeamsContent() {
           </>
         )}
       </section>
+
+      {/* Rename dialog */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <form onSubmit={handleRenameSubmit}>
+            <DialogHeader>
+              <DialogTitle>Rename team</DialogTitle>
+              <DialogDescription>
+                Enter a new name for this team.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-4">
+              <Label htmlFor="rename-team-name">Team name</Label>
+              <Input
+                id="rename-team-name"
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                placeholder="Platform Team"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={renameTeam.isPending}>
+                {renameTeam.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Rename
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete team</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the team and all its connections. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteTeam.isPending}
+            >
+              {deleteTeam.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete team
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave confirmation dialog */}
+      <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave team</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave this team? You will lose access to the team&apos;s shared connections.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLeaveOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveConfirm}
+              disabled={leaveTeam.isPending}
+            >
+              {leaveTeam.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Leave team
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

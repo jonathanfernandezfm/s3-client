@@ -1,4 +1,4 @@
-export const BUCKET_TAB_KEYS = ["overview", "multipart", "lifecycle", "permissions"] as const;
+export const BUCKET_TAB_KEYS = ["overview", "multipart", "permissions"] as const;
 export type BucketTabKey = (typeof BUCKET_TAB_KEYS)[number];
 
 // Human-readable URL slugs that map onto an internal tab key.
