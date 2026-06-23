@@ -40,6 +40,20 @@ export function ConnectionDetailTabs({ connectionId }: ConnectionDetailTabsProps
     router.push(`/app/connections/${connectionId}?${params.toString()}`);
   };
 
+  const TAB_KEYS = TAB_DEFINITIONS.map((d) => d.key);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    const idx = TAB_KEYS.indexOf(activeTab);
+    let next = idx;
+    if (e.key === "ArrowRight") next = (idx + 1) % TAB_KEYS.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + TAB_KEYS.length) % TAB_KEYS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TAB_KEYS.length - 1;
+    else return;
+    e.preventDefault();
+    setTab(TAB_KEYS[next]);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <header className="border-b px-6 py-4 space-y-3 pb-0">
@@ -59,27 +73,42 @@ export function ConnectionDetailTabs({ connectionId }: ConnectionDetailTabsProps
             </span>
           )}
         </div>
-        <nav className="flex items-center gap-1 -mb-px">
-          {TAB_DEFINITIONS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors",
-                key === activeTab
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
+        <nav role="tablist" aria-label="Connection sections" className="flex items-center gap-1 -mb-px">
+          {TAB_DEFINITIONS.map(({ key, label, icon: Icon }) => {
+            const selected = key === activeTab;
+            return (
+              <button
+                key={key}
+                id={`connection-tab-${key}`}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls="connection-tabpanel"
+                tabIndex={selected ? 0 : -1}
+                onClick={() => setTab(key)}
+                onKeyDown={handleTabKeyDown}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors",
+                  selected
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            );
+          })}
         </nav>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        id="connection-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`connection-tab-${activeTab}`}
+        tabIndex={0}
+        className="flex-1 overflow-y-auto p-6"
+      >
         {activeTab === "overview" && (
           <ConnectionOverviewTab connectionId={connectionId} />
         )}
