@@ -9,6 +9,8 @@ import { PropertiesDrawer } from "@/components/properties-drawer/properties-draw
 import { VersionHistoryDialog } from "@/components/versions/version-history-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PlansModal } from "@/components/billing/plans-modal";
+import { SkipToContent } from "@/components/shared/skip-to-content";
+import { RouteFocus } from "@/components/shared/route-focus";
 
 export default function DashboardLayout({
   children,
@@ -18,13 +20,15 @@ export default function DashboardLayout({
   return (
     <TooltipProvider>
     <DragProvider>
+      <SkipToContent />
       <div className="flex h-screen overflow-hidden">
         <AppSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 flex flex-col overflow-hidden">{children}</main>
+          <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden outline-none">{children}</main>
         </div>
       </div>
+      <RouteFocus />
       <InfoDrawer />
       <PropertiesDrawer />
       <VersionHistoryDialog />
