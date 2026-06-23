@@ -53,6 +53,8 @@ function sseLabel(p: ObjectProperties): string {
 
 export function PropertiesDrawer() {
   const { isOpen, scope, close } = usePropertiesDrawerStore();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   const connectionId = scope?.connectionId ?? "";
   const bucket = scope?.bucket ?? "";
@@ -77,6 +79,19 @@ export function PropertiesDrawer() {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, close]);
 
+  useEffect(() => {
+    if (isOpen) {
+      // remember where focus was so we can restore it on close
+      lastFocusedRef.current = document.activeElement as HTMLElement | null;
+      // move focus into the drawer
+      panelRef.current?.focus({ preventScroll: true });
+    } else {
+      // restore focus to the trigger when closing
+      lastFocusedRef.current?.focus?.({ preventScroll: true });
+      lastFocusedRef.current = null;
+    }
+  }, [isOpen]);
+
   return (
     <>
       {isOpen && (
@@ -87,8 +102,12 @@ export function PropertiesDrawer() {
         />
       )}
       <div
-        aria-label="Properties drawer"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="properties-drawer-title"
         aria-hidden={!isOpen}
+        tabIndex={-1}
         style={{
           position: "fixed",
           top: 0,
@@ -110,7 +129,7 @@ export function PropertiesDrawer() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Properties</h2>
+              <h2 id="properties-drawer-title" className="text-sm font-semibold">Properties</h2>
             </div>
             {fileName && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
@@ -124,6 +143,7 @@ export function PropertiesDrawer() {
             className="h-7 w-7 shrink-0"
             onClick={close}
             title="Close"
+            aria-label="Close"
           >
             <X className="h-3.5 w-3.5" />
           </Button>

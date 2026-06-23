@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   X,
   Activity,
@@ -28,6 +28,8 @@ const TAB_ORDER: InfoDrawerTab[] = ["activity", "notes", "versions"];
 
 export function InfoDrawer() {
   const { isOpen, scope, activeTab, setActiveTab, setScope, close } = useInfoDrawerStore();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   const hasScope = !!scope?.connectionId && !!scope?.bucket;
   const scopeLabel = scope?.bucket
@@ -50,6 +52,19 @@ export function InfoDrawer() {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, close]);
 
+  useEffect(() => {
+    if (isOpen) {
+      // remember where focus was so we can restore it on close
+      lastFocusedRef.current = document.activeElement as HTMLElement | null;
+      // move focus into the drawer
+      panelRef.current?.focus({ preventScroll: true });
+    } else {
+      // restore focus to the trigger when closing
+      lastFocusedRef.current?.focus?.({ preventScroll: true });
+      lastFocusedRef.current = null;
+    }
+  }, [isOpen]);
+
   const ActiveIcon = TAB_META[activeTab].icon;
 
   return (
@@ -62,8 +77,12 @@ export function InfoDrawer() {
         />
       )}
       <div
-        aria-label="Info drawer"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="info-drawer-title"
         aria-hidden={!isOpen}
+        tabIndex={-1}
         style={{
           position: "fixed",
           top: 0,
@@ -85,7 +104,7 @@ export function InfoDrawer() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <ActiveIcon className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">{TAB_META[activeTab].label}</h2>
+              <h2 id="info-drawer-title" className="text-sm font-semibold">{TAB_META[activeTab].label}</h2>
             </div>
             {scopeLabel && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-65">
@@ -114,6 +133,7 @@ export function InfoDrawer() {
               className="h-7 w-7"
               onClick={close}
               title="Close"
+              aria-label="Close"
             >
               <X className="h-3.5 w-3.5" />
             </Button>
