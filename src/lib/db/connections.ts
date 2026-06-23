@@ -28,7 +28,7 @@ export type ConnectionAccess = {
   role: ConnectionRole;
 };
 
-function getRoleForWorkspace(
+export function getRoleForWorkspace(
   userId: string,
   workspace: {
     type: "PERSONAL" | "TEAM";
@@ -128,6 +128,99 @@ export async function getConnectionsByUserId(
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export type ConnectionListEntry = {
+  connection: {
+    id: string;
+    name: string | null;
+    endpoint: string;
+    region: string;
+    accessKeyId: string;
+    forcePathStyle: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  workspaceId: string;
+  workspaceType: "PERSONAL" | "TEAM";
+  role: ConnectionRole;
+};
+
+/**
+ * List all connections a user can access, with role + workspace metadata
+ * resolved in a single query. Does NOT decrypt secrets — for list views that
+ * never expose the secret key. Use getConnectionAccessById for single-connection
+ * operations that need the decrypted secret.
+ */
+export async function listConnectionsWithAccess(
+  userId: string,
+  workspaceId?: string
+): Promise<ConnectionListEntry[]> {
+  const include = {
+    workspace: {
+      include: {
+        team: {
+          include: {
+            members: {
+              where: { userId },
+              select: { role: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    },
+  } as const;
+
+  let rows;
+  if (workspaceId) {
+    const access = await getWorkspaceAccess(workspaceId, userId);
+    if (!access) return [];
+    rows = await prisma.connection.findMany({
+      where: { workspaceId },
+      include,
+      orderBy: { createdAt: "desc" },
+    });
+  } else {
+    rows = await prisma.connection.findMany({
+      where: {
+        OR: [
+          { workspace: { type: "PERSONAL", userId } },
+          {
+            workspace: {
+              type: "TEAM",
+              team: { members: { some: { userId } } },
+            },
+          },
+        ],
+      },
+      include,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  return rows
+    .map((row) => {
+      if (!row.workspace) return null;
+      const role = getRoleForWorkspace(userId, row.workspace);
+      if (!role) return null;
+      return {
+        connection: {
+          id: row.id,
+          name: row.name,
+          endpoint: row.endpoint,
+          region: row.region,
+          accessKeyId: row.accessKeyId,
+          forcePathStyle: row.forcePathStyle,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        },
+        workspaceId: row.workspace.id,
+        workspaceType: row.workspace.type,
+        role,
+      };
+    })
+    .filter((e): e is ConnectionListEntry => e !== null);
 }
 
 /**
