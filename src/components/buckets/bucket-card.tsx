@@ -86,12 +86,13 @@ export function BucketCard({
               }}
               className={`p-1 rounded hover:bg-accent ${pinned ? "text-yellow-400" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
               title={pinned ? "Unpin" : "Pin"}
+              aria-label={pinned ? "Unpin bucket" : "Pin bucket"}
             >
               <Star className="size-4" fill={pinned ? "currentColor" : "none"} />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Bucket options">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

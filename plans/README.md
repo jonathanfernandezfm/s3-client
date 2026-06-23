@@ -69,6 +69,7 @@ and update your row when done.
 | 027  | Warn on upload key conflicts instead of silently overwriting | P1 | M | — | DONE (PR #30) |
 | 028  | Export the activity log to CSV | P2 | M | — | DONE (PR #32) |
 | 029  | Break bucket storage stats down by file type + largest objects | P2 | M | — | DONE (PR #31) |
+| 042  | Add accessible names to icon-only buttons in bucket grid and pane tab bar | P3 | S | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 

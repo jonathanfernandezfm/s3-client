@@ -119,6 +119,7 @@ function TabItem({ tab, isActive, paneId }: TabItemProps) {
             e.stopPropagation();
             removeTab(paneId, tab.id);
           }}
+          aria-label={`Close tab ${getTabLabel()}`}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -177,6 +178,7 @@ export function TabBar({ paneId }: TabBarProps) {
           className="h-9 w-9 shrink-0 mt-2 mb-0.5 ml-1 rounded-lg"
           onClick={handleAddTab}
           title="New tab"
+          aria-label="New tab"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -191,6 +193,7 @@ export function TabBar({ paneId }: TabBarProps) {
           onClick={handleSplitRight}
           disabled={!canSplitRight}
           title="Split right"
+          aria-label="Split pane right"
         >
           <PanelRight className="h-4 w-4" />
         </Button>
@@ -201,6 +204,7 @@ export function TabBar({ paneId }: TabBarProps) {
             className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
             onClick={handleClosePane}
             title="Close pane"
+            aria-label="Close pane"
           >
             <X className="h-4 w-4" />
           </Button>
