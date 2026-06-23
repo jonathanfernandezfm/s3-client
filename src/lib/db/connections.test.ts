@@ -39,7 +39,7 @@ const teamRow = {
 
 describe("listConnectionsWithAccess", () => {
   test("resolves all connections in a single findMany (no N+1)", async () => {
-    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([personalRow, teamRow] as any[]);
+    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([personalRow, teamRow]);
 
     const result = await listConnectionsWithAccess("u1");
 
@@ -51,14 +51,14 @@ describe("listConnectionsWithAccess", () => {
   });
 
   test("never decrypts secrets for the list view", async () => {
-    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([personalRow] as any[]);
+    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([personalRow]);
     await listConnectionsWithAccess("u1");
     expect(decryptSpy).not.toHaveBeenCalled();
   });
 
   test("filters out connections where the user has no role", async () => {
     const foreignPersonal = { ...personalRow, workspace: { id: "ws9", type: "PERSONAL", userId: "someone-else", team: null } };
-    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([foreignPersonal] as any[]);
+    (prisma.connection.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([foreignPersonal]);
     const result = await listConnectionsWithAccess("u1");
     expect(result).toHaveLength(0);
   });
