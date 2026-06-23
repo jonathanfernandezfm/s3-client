@@ -2,12 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Database, Lock, RefreshCw, Repeat } from "lucide-react";
+import { ArrowLeft, BarChart3, Database, Lock, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/lib/queries/connections";
 import { canManageFiles } from "@/lib/roles";
 import { resolveBucketTab, type BucketTabKey } from "./bucket-tab-key";
-import { ComingSoonTab } from "./coming-soon-tab";
 import { MultipartUploadsTab } from "./multipart-uploads-tab";
 import { OverviewTab } from "./overview-tab";
 import { PermissionsTab } from "./permissions-tab";
@@ -15,7 +14,6 @@ import { PermissionsTab } from "./permissions-tab";
 const TAB_DEFINITIONS = [
   { key: "overview", label: "Overview", icon: BarChart3 },
   { key: "multipart", label: "Incomplete uploads", icon: RefreshCw },
-  { key: "lifecycle", label: "Lifecycle rules", icon: Repeat, badge: "Soon" },
   { key: "permissions", label: "Permissions", icon: Lock },
 ] as const;
 
@@ -76,7 +74,6 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
         <nav role="tablist" aria-label="Bucket sections" className="flex items-center gap-1 -mb-px">
           {TAB_DEFINITIONS.map((def) => {
             const { key, label, icon: Icon } = def;
-            const badge = "badge" in def ? def.badge : undefined;
             const selected = key === activeTab;
             return (
               <button
@@ -98,11 +95,6 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
               >
                 <Icon className="h-4 w-4" />
                 {label}
-                {badge && (
-                  <span className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -124,12 +116,6 @@ export function BucketDetailTabs({ connectionId, bucket }: BucketDetailTabsProps
             connectionId={connectionId}
             bucket={bucket}
             canAbort={canAbort}
-          />
-        )}
-        {activeTab === "lifecycle" && (
-          <ComingSoonTab
-            title="Lifecycle rules coming soon"
-            description="Configure auto-deletion, storage-class transitions, and auto-aborting of incomplete uploads."
           />
         )}
         {activeTab === "permissions" && (

@@ -102,7 +102,7 @@ and update your row when done.
 | 047  | Validate all required environment variables at server startup | P1 | S | — | DONE (PR #56) |
 | 048  | Add branded error boundaries and a 404 page | P1 | S | — | DONE (PR #55) |
 | 049  | Team invitation links (MVP) — onboard members who haven't signed up yet | P1 | M | — | TODO |
-| 050  | Teams UX polish — styled role select, rename/delete/leave, declutter, hide "coming soon" | P2 | M | — | TODO |
+| 050  | Teams UX polish — styled role select, rename/delete/leave, declutter, hide "coming soon" | P2 | M | #57 | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
