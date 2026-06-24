@@ -57,6 +57,11 @@ enum ShareLinkEventAction {
   DOWNLOAD
 }
 
+enum FeedbackType {
+  FEEDBACK
+  BUG_REPORT
+}
+
 enum CrawlJobStatus {
   PENDING
   RUNNING
@@ -97,6 +102,7 @@ model User {
   fileNotes         FileNote[]      @relation("FileNoteAuthor")
   createdShareLinks ShareLink[]     @relation("ShareLinkCreator")
   mcpTokens         McpToken[]
+  feedbacks         Feedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -519,4 +525,17 @@ model WebhookEvent {
   @@unique([source, eventId])
   @@index([source, createdAt(sort: Desc)])
   @@map("webhook_events")
+}
+
+model Feedback {
+  id      String       @id @default(uuid())
+  type    FeedbackType
+  message String
+
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  userEmail String?
+
+  createdAt DateTime @default(now())
 }
