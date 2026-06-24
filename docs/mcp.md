@@ -27,11 +27,18 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`
           "args": ["mcp"],
           "cwd": "/absolute/path/to/this/repo",
           "env": {
-            "S3DOCK_URL": "https://your-s3dock.example.com",
             "S3DOCK_MCP_TOKEN": "s3dock_pat_..."
           }
         }
       }
+    }
+
+`S3DOCK_URL` defaults to `https://s3dock.com`. Set it only when pointing at a
+self-hosted instance:
+
+    "env": {
+      "S3DOCK_URL": "https://your-s3dock.example.com",
+      "S3DOCK_MCP_TOKEN": "s3dock_pat_..."
     }
 
 ### 3. Verify

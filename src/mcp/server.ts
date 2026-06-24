@@ -15,7 +15,7 @@ export async function sdFetch(
   init: RequestInit = {},
   config?: { baseUrl: string; token: string }
 ): Promise<unknown> {
-  const baseUrl = config?.baseUrl ?? process.env.S3DOCK_URL?.replace(/\/$/, "") ?? "";
+  const baseUrl = config?.baseUrl ?? process.env.S3DOCK_URL?.replace(/\/$/, "") ?? "https://s3dock.com";
   const token = config?.token ?? process.env.S3DOCK_MCP_TOKEN ?? "";
 
   const res = await fetch(`${baseUrl}${path}`, {
@@ -53,11 +53,11 @@ async function verifyToken(): Promise<void> {
 
 async function main() {
   // Config — validated at startup
-  const BASE_URL = process.env.S3DOCK_URL?.replace(/\/$/, "");
+  const BASE_URL = process.env.S3DOCK_URL?.replace(/\/$/, "") ?? "https://s3dock.com";
   const TOKEN = process.env.S3DOCK_MCP_TOKEN;
 
-  if (!BASE_URL || !TOKEN) {
-    console.error("[s3dock-mcp] S3DOCK_URL and S3DOCK_MCP_TOKEN must be set.");
+  if (!TOKEN) {
+    console.error("[s3dock-mcp] S3DOCK_MCP_TOKEN must be set.");
     process.exit(1);
   }
 
