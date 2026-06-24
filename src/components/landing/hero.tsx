@@ -115,7 +115,7 @@ export function Hero() {
         className="relative z-10 mt-14 w-full max-w-4xl"
       >
         <AppWindow
-          title="s3dock.app — demo"
+          title="s3dock.com — demo"
           className="shadow-[0_40px_120px_var(--accent-amber-glow)]"
         >
           <FileGrid items={HERO_FILES} className="py-6 opacity-80" />

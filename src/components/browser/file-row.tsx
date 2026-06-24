@@ -133,6 +133,7 @@ function FileRowImpl({
   const [tagsOpen, setTagsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(null);
   const { can } = useTier();
   const openUpgradeModal = useUpgradeModalStore((s) => s.open);
   const prefixBookmarks = useBookmarksForBucket(connectionId, bucket);
@@ -202,7 +203,7 @@ function FileRowImpl({
       {...dragHandlers}
       {...(folderDropHandlers ?? {})}
       style={{ cursor: "grab" }}
-      onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
+      onContextMenu={(e) => { e.preventDefault(); setContextPos({ x: e.clientX, y: e.clientY }); setMenuOpen(true); }}
       onClickCapture={(e) => {
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           e.preventDefault();
@@ -301,13 +302,27 @@ function FileRowImpl({
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
           )}
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenu open={menuOpen} onOpenChange={(open) => { setMenuOpen(open); if (!open) setContextPos(null); }}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              {contextPos ? (
+                <span
+                  style={{
+                    position: "fixed",
+                    left: contextPos.x,
+                    top: contextPos.y,
+                    width: 0,
+                    height: 0,
+                    display: "block",
+                    pointerEvents: "none",
+                  }}
+                />
+              ) : (
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align={contextPos ? "start" : "end"}>
               {canPreview && (
                 <DropdownMenuItem onClick={() => onPreview(object)}>
                   <Eye className="h-4 w-4" />

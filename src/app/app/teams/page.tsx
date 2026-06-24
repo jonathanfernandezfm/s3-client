@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   useTeams,
   useTeam,
@@ -50,15 +51,28 @@ function TeamsContent() {
 
   const { data: teams = [], isLoading: isLoadingTeams } = useTeams();
   const createTeam = useCreateTeam();
+  const searchParams = useSearchParams();
+  const workspaceParam = searchParams.get("workspace");
+  const handledWorkspaceRef = useRef<string | null>(null);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedTeamId && teams.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing pattern; auto-select first team on load is intentional, real fix tracked separately
+    if (!teams.length) return;
+    if (workspaceParam && handledWorkspaceRef.current !== workspaceParam) {
+      const match = teams.find((t) => t.workspaceId === workspaceParam);
+      if (match) {
+        handledWorkspaceRef.current = workspaceParam;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing pattern; auto-select from URL param is intentional
+        setSelectedTeamId(match.id);
+        return;
+      }
+    }
+    if (!selectedTeamId) {
+       
       setSelectedTeamId(teams[0].id);
     }
-  }, [teams, selectedTeamId]);
+  }, [teams, selectedTeamId, workspaceParam]);
 
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const intent = usePaletteIntentStore((s) => s.intent);
@@ -306,7 +320,7 @@ function TeamsContent() {
     return (
       <LockedPageOverlay
         feature="Teams"
-        description="Create a shared workspace and invite colleagues to collaborate on your S3 connections."
+        description="Create a shared workspace and invite colleagues to collaborate on your S3 instances."
       />
     );
   }

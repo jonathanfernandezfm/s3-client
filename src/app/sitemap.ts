@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://s3dock.app";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://s3dock.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

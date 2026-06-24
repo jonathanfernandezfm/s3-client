@@ -125,7 +125,7 @@ function StaticBeats() {
             key={beat.title}
             className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.4fr_1fr]"
           >
-            <AppWindow title="s3dock.app"><Scene animated={false} /></AppWindow>
+            <AppWindow title="s3dock.com"><Scene animated={false} /></AppWindow>
             <div>
               <h3 className="text-2xl font-semibold tracking-tight text-white">
                 {beat.title}
@@ -164,7 +164,7 @@ export function MetaphorReveal() {
     <section ref={ref} className="relative h-[250svh]">
       <div className="sticky top-0 flex h-svh items-center overflow-hidden">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-6 lg:grid-cols-[1.4fr_1fr]">
-          <AppWindow title="s3dock.app">
+          <AppWindow title="s3dock.com">
             <AnimatePresence mode="wait">
               <motion.div
                 key={beat}

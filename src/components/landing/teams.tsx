@@ -15,7 +15,7 @@ function ShareLinkCard() {
       </div>
       <div className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2">
         <span className="truncate font-mono text-xs text-white/60">
-          s3dock.app/s/q2-report-x7f2
+          s3dock.com/s/q2-report-x7f2
         </span>
         <Copy className="size-3.5 shrink-0 text-white/40" />
       </div>

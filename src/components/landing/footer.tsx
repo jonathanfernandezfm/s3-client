@@ -22,7 +22,7 @@ const COLUMNS = [
     title: "Company",
     links: [
       ["About", "#"],
-      ["Contact", "mailto:hello@s3dock.app"],
+      ["Contact", "mailto:hello@s3dock.com"],
     ],
   },
   {

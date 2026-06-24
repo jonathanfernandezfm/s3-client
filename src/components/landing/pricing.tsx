@@ -31,7 +31,7 @@ function PlanCta({ planId }: { planId: PlanDisplay["id"] }) {
   if (planId === "enterprise") {
     return (
       <a
-        href="mailto:hello@s3dock.app"
+        href="mailto:hello@s3dock.com"
         className="mt-6 block rounded-lg border border-white/15 py-2 text-center text-sm text-white/80 transition-colors hover:border-white/30"
       >
         Contact us

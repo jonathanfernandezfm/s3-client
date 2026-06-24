@@ -32,7 +32,7 @@ const jsonLd = {
       name: "S3 Dock",
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Web",
-      url: "https://s3dock.app",
+      url: "https://s3dock.com",
       description:
         "A modern web UI for S3, R2, MinIO, and anything else that speaks the protocol.",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -40,8 +40,8 @@ const jsonLd = {
     {
       "@type": "Organization",
       name: "S3 Dock",
-      url: "https://s3dock.app",
-      logo: "https://s3dock.app/logo.png",
+      url: "https://s3dock.com",
+      logo: "https://s3dock.com/logo.png",
     },
   ],
 };

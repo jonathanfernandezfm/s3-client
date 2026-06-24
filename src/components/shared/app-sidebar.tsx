@@ -342,24 +342,46 @@ export function AppSidebar() {
                   return (
                     <div key={workspace.id}>
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleWorkspace(workspace.id)}
-                          aria-expanded={!isCollapsed}
-                          className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-md text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground min-w-0"
-                        >
-                          {isCollapsed ? (
-                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          )}
-                          {workspace.type === "TEAM" ? (
-                            <Users className="h-3.5 w-3.5 shrink-0" />
-                          ) : (
+                        {workspace.type === "TEAM" ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleWorkspace(workspace.id)}
+                              aria-expanded={!isCollapsed}
+                              aria-label={isCollapsed ? "Expand" : "Collapse"}
+                              className="p-1.5 rounded-md hover:bg-sidebar-accent/50 text-muted-foreground shrink-0"
+                            >
+                              {isCollapsed ? (
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/app/teams?workspace=${workspace.id}`)}
+                              className="flex items-center gap-2 flex-1 min-w-0 px-1 py-1.5 rounded-md text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground"
+                            >
+                              <Users className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{workspace.name}</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleWorkspace(workspace.id)}
+                            aria-expanded={!isCollapsed}
+                            className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-md text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground min-w-0"
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
                             <Briefcase className="h-3.5 w-3.5 shrink-0" />
-                          )}
-                          <span className="truncate">{workspace.name}</span>
-                        </button>
+                            <span className="truncate">{workspace.name}</span>
+                          </button>
+                        )}
                         {workspace.role === "ADMIN" && (
                           workspace.type === "TEAM" ? (
                             <DropdownMenu>

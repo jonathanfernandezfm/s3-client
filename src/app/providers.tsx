@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { PostHogProvider } from "@/components/providers/posthog-provider";
+import { ClerkThemeProvider } from "@/components/providers/clerk-theme-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -18,10 +19,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <PostHogProvider>
-        {children}
-      </PostHogProvider>
-    </QueryClientProvider>
+    <ClerkThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
+      </QueryClientProvider>
+    </ClerkThemeProvider>
   );
 }

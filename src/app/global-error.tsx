@@ -14,33 +14,22 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
-      <body
-        style={{
-          display: "flex",
-          minHeight: "100vh",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "1rem",
-          fontFamily: "system-ui, sans-serif",
-          padding: "1.5rem",
-        }}
-      >
-        <h2 style={{ fontSize: "1.125rem", fontWeight: 600 }}>
-          Something went wrong
-        </h2>
-        <p style={{ fontSize: "0.875rem", color: "#6b7280", maxWidth: "24rem", textAlign: "center" }}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var s=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s===null&&d))document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center gap-4 p-6 font-sans antialiased">
+        <h2 className="text-lg font-semibold">Something went wrong</h2>
+        <p className="text-sm text-muted-foreground max-w-sm text-center">
           An unexpected error occurred while loading the app. Please reload the page.
         </p>
         <button
           onClick={() => reset()}
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #d1d5db",
-            cursor: "pointer",
-          }}
+          className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted/60 bg-background text-foreground cursor-pointer"
         >
           Try again
         </button>

@@ -138,7 +138,7 @@ export function PlansModal({ open: controlledOpen, onOpenChange }: PlansModalPro
               variant="secondary"
               className="mt-4 w-full"
               onClick={() => {
-                window.location.href = "mailto:hello@s3dock.app";
+                window.location.href = "mailto:hello@s3dock.com";
               }}
             >
               Contact us

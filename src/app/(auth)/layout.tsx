@@ -54,7 +54,7 @@ export default function AuthLayout({
         </div>
 
         <p className="font-mono text-xs text-white/40">
-          s3dock.app — one client, every S3.
+          s3dock.com — one client, every S3.
         </p>
       </div>
 

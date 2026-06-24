@@ -45,6 +45,22 @@ migration (removes shadcn toast stack; unifies all in-app feedback through
 copy-URI icon transition, `useSyncExternalStore` theme toggle) landed in commit
 `49a31e0` on 2026-06-22. No plan covers this work — it predates any planning session.
 
+Plans 051–052 were authored on 2026-06-24 at commit `96f1d63` from an
+`/improve plan` session: **"an MCP server that exposes S3 operations through
+S3Dock."** Feasibility was assessed as **high** — S3Dock already isolates all
+S3 logic behind a thin lib layer (`createS3Client`, `getConnectionAccessById`,
+`meterOperation`, `roles.ts`), and that chain was verified to import nothing
+from `next/*` or `server-only`, so it runs in a plain Node process. The one
+real gap is **machine authentication**: every user-facing path uses Clerk
+session *cookies* (`withAuth`), which a non-browser MCP client can't present.
+So the work splits into **051** (a Personal Access Token system — the auth
+foundation, no UI/route, CLI-issued, hashed-token resolver) and **052** (a
+read-only stdio MCP server that resolves the PAT to a user and reuses the lib
+layer for list/head/presign tools). MVP defaults chosen by the advisor (the
+user said "continue" rather than pick): in-process lib reuse (not an HTTP
+proxy), local stdio transport (not hosted/OAuth), read-only tools (mutations
+deferred). 052 depends on 051. Both are independent of plans 001–050.
+
 Execute in the order below unless dependencies say otherwise. Each
 executor: read the plan fully before starting, honor its STOP conditions,
 and update your row when done.
@@ -103,6 +119,8 @@ and update your row when done.
 | 048  | Add branded error boundaries and a 404 page | P1 | S | — | DONE (PR #55) |
 | 049  | Team invitation links (MVP) — onboard members who haven't signed up yet | P1 | M | — | DONE (PR #58) |
 | 050  | Teams UX polish — styled role select, rename/delete/leave, declutter, hide "coming soon" | P2 | M | #57 | DONE |
+| 051  | Personal Access Tokens for non-cookie clients (auth foundation for MCP) | P2 | M | — | DONE |
+| 052  | Read-only MCP server exposing S3 operations through S3Dock | P2 | M | 051 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
@@ -197,6 +215,17 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   drift check and rebase those shared files; reuse 050's styled `<select>` for
   049's invite role picker if 050 landed first. Suggested order: 047, 048
   (quick wins) → 049 (headline) → 050 (polish).
+
+- 051–052 (MCP server) were authored 2026-06-24 at `96f1d63`. **052 hard-depends
+  on 051** — the MCP server resolves a Personal Access Token to a user via
+  `resolveMcpToken`, which 051 creates; do not build 052 without it. 051 is a
+  DB migration (`mcp_tokens` table) + a pure resolver + a CLI issuer, with **no
+  UI and no API route** (those are deferred follow-ups noted in 051). 052 is a
+  standalone `tsx`-run stdio process under `src/mcp/` that touches no
+  `src/app/**` or `src/lib/**` file — it only reuses the lib layer read-only.
+  Mutating S3 tools and a hosted/HTTP transport are explicitly deferred to
+  follow-up plans (see 052 maintenance notes). Both are independent of all prior
+  plans. They use the clean post-003/004 gate below.
 
 ## Verification baseline (HEAD `49a31e0`, post-003/004)
 

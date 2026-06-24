@@ -26,7 +26,7 @@ export default function OpengraphImage() {
           A modern web UI for S3, R2, MinIO, and anything that speaks the protocol.
         </div>
         <div style={{ marginTop: 56, fontSize: 30, color: "#f59e0b" }}>
-          s3dock.app
+          s3dock.com
         </div>
       </div>
     ),

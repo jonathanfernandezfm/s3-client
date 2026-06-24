@@ -1,0 +1,318 @@
+# Plan 051: Personal Access Token (PAT) auth for non-cookie clients
+
+> **Executor instructions**: Follow this plan step by step. Run every
+> verification command and confirm the expected result before moving to the
+> next step. If anything in the "STOP conditions" section occurs, stop and
+> report — do not improvise. When done, update the status row for this plan
+> in `plans/README.md`.
+>
+> **Drift check (run first)**:
+> `git diff --stat 96f1d63..HEAD -- prisma/schema.prisma src/lib/auth src/lib/crypto.ts scripts`
+> If any in-scope file changed since this plan was written, compare the
+> "Current state" excerpts against the live code before proceeding; on a
+> mismatch, treat it as a STOP condition.
+
+## Status
+
+- **Priority**: P2
+- **Effort**: M
+- **Risk**: MED (adds a new authentication path + a DB migration)
+- **Depends on**: none
+- **Category**: security / dx (foundation for the MCP server, plan 052)
+- **Planned at**: commit `96f1d63`, 2026-06-24
+
+## Why this matters
+
+Every user-facing entry point today authenticates via a Clerk **session
+cookie** (`withAuth`, `src/lib/auth/protect.ts:23`). A cookie cannot be
+presented by a non-browser client (an MCP server, a CLI, CI). The only
+existing non-cookie auth is a single shared-secret `INTERNAL_API_TOKEN`
+(`src/app/api/internal/crawl/route.ts:14`) that is not scoped to any user, so
+it can't drive per-user S3 access. This plan adds a **Personal Access Token**
+system: a user mints a long-lived token, a machine presents it, and the
+backend resolves it to the same internal `User` row that `withAuth` would
+have produced — without inventing a second authorization model. Plan 052 (the
+MCP server) consumes this; nothing else changes until then.
+
+This plan is intentionally self-contained and **adds no HTTP surface and no UI**
+— a token is minted by a CLI script and resolved by a pure library function.
+That keeps the new auth path small and reviewable. (UI/route issuance is a
+deferred follow-up; see Maintenance notes.)
+
+## Current state
+
+The facts the executor needs, inlined:
+
+- **Internal `User` model** — `prisma/schema.prisma:73-104`. Primary key is
+  `id String @id @default(uuid())` (the internal id, distinct from `clerkId`).
+  All access helpers key off this internal `id`. Excerpt:
+  ```prisma
+  model User {
+    id        String  @id @default(uuid())
+    clerkId   String  @unique // Clerk user ID (user_xxx)
+    email     String  @unique
+    ...
+    @@map("users")
+  }
+  ```
+- **How `withAuth` produces a user** — `src/lib/auth/protect.ts:24-81`. It
+  reads the Clerk `userId`, then `prisma.user.findUnique({ where: { clerkId },
+  include: { subscription: true } })`. The PAT resolver must return the same
+  shape: a `User` **with `subscription` included** (downstream code reads
+  `user.subscription?.tier`).
+- **Existing encryption helper** — `src/lib/crypto.ts`. AES-256-GCM for
+  *secrets that must be decrypted later*. **Do NOT use it for tokens** — a
+  token only needs verification, not decryption, so it is hashed, not
+  encrypted. The file also shows the project's `node:crypto` usage style
+  (`import { ... } from "crypto"`).
+- **Existing CLI script convention** — `scripts/inspect-bucket.js` and
+  `scripts/empty-bucket.js` are **plain CommonJS** (`require(...)`,
+  `require("dotenv").config()`), run with `node scripts/<name>.js`. They talk
+  to Postgres with the `pg` `Client` directly. Match this style for the
+  token-issuing script (Step 3) — do not write it as an ESM/TypeScript file.
+- **Prisma client output path** — `src/generated/prisma/` (custom output, see
+  `prisma/schema.prisma:4-7`). Regenerate with `pnpm prisma generate`.
+- **Token hashing choice (load-bearing)**: API tokens are high-entropy random
+  values, so a fast deterministic `sha256` of the token is the correct stored
+  form (unlike user passwords, which need a slow salted hash like bcrypt). A
+  deterministic hash is also what makes O(1) lookup possible — you cannot query
+  a salted-bcrypt column by value. Store `sha256(rawToken)` hex, indexed unique.
+
+## Commands you will need
+
+| Purpose            | Command                                  | Expected on success |
+|--------------------|------------------------------------------|---------------------|
+| Generate client    | `pnpm prisma generate`                   | exit 0              |
+| Create migration   | `pnpm prisma migrate dev --name mcp_tokens` | migration applied, exit 0 |
+| Typecheck          | `pnpm typecheck`                         | exit 0, no errors   |
+| Tests              | `pnpm test -- mcp-token`                 | all pass            |
+| Lint               | `pnpm lint`                              | exit 0              |
+
+The active verification gate for this repo (per `plans/README.md`) is:
+`pnpm test && pnpm typecheck && pnpm lint` → exit 0.
+
+## Scope
+
+**In scope** (the only files you should create/modify):
+- `prisma/schema.prisma` (add one model + one relation field on `User`)
+- `prisma/migrations/**` (generated by `prisma migrate dev` — do not hand-edit)
+- `src/lib/auth/mcp-token.ts` (create — issue + resolve functions)
+- `src/lib/auth/mcp-token.test.ts` (create)
+- `src/lib/auth/index.ts` (add two re-exports)
+- `scripts/issue-mcp-token.js` (create — CLI minting)
+
+**Out of scope** (do NOT touch, even though they look related):
+- `src/lib/auth/protect.ts` / `clerk.ts` — the cookie path stays exactly as is;
+  the PAT path is **additive**, not a replacement.
+- Any API route — this plan adds no HTTP surface. Plan 052 consumes the
+  resolver in-process; an HTTP transport is a separate, later decision.
+- `src/lib/crypto.ts` — reuse its style, do not modify it.
+
+## Git workflow
+
+- Branch: `advisor/051-mcp-personal-access-tokens`
+- Commit per logical unit; message style is conventional commits (see
+  `git log`, e.g. `feat: add Team invitation links (MVP)...`). Suggested:
+  `feat: add personal access tokens for non-cookie clients`.
+- Do NOT push or open a PR unless the operator instructed it.
+
+## Steps
+
+### Step 1: Add the `McpToken` model and `User` relation
+
+In `prisma/schema.prisma`, add a relation field to `User` (inside the existing
+`model User { ... }` relations block, near `bookmarks Bookmark[]`):
+
+```prisma
+  mcpTokens         McpToken[]
+```
+
+Then add the model (place it after the `Connection` model for locality):
+
+```prisma
+// Personal access tokens for non-cookie clients (MCP server, CLI).
+// tokenHash is sha256(rawToken) hex — the raw token is shown once at creation
+// and never stored. See src/lib/auth/mcp-token.ts.
+model McpToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name       String    // human label, e.g. "Claude Desktop laptop"
+  tokenHash  String    @unique // sha256 hex of the raw token
+  prefix     String    // first 12 chars of the raw token, for display/identification
+
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@map("mcp_tokens")
+}
+```
+
+**Verify**: `pnpm prisma generate` → exit 0, and `pnpm prisma migrate dev --name mcp_tokens`
+→ "migration applied". (If the dev DB is unreachable, see STOP conditions.)
+
+### Step 2: Implement issue + resolve in `src/lib/auth/mcp-token.ts`
+
+Create `src/lib/auth/mcp-token.ts`. It must export:
+
+- `TOKEN_PREFIX = "s3dock_pat_"` (string literal constant).
+- `issueMcpToken(userId: string, name: string, opts?: { expiresAt?: Date }): Promise<{ token: string; record: McpToken }>`
+  - Generate 32 random bytes via `randomBytes(32)` and encode base64url:
+    `randomBytes(32).toString("base64url")`.
+  - `const raw = TOKEN_PREFIX + secret;`
+  - `const tokenHash = sha256Hex(raw);` where
+    `sha256Hex = (s) => createHash("sha256").update(s).digest("hex")`.
+  - `const prefix = raw.slice(0, 12);`
+  - Persist via `prisma.mcpToken.create({ data: { userId, name, tokenHash, prefix, expiresAt: opts?.expiresAt } })`.
+  - Return `{ token: raw, record }`. **The raw token is returned exactly once.**
+- `resolveMcpToken(rawToken: string): Promise<AuthUser | null>`
+  - Guard: if `!rawToken?.startsWith(TOKEN_PREFIX)` return `null`.
+  - `const tokenHash = sha256Hex(rawToken);`
+  - `const record = await prisma.mcpToken.findUnique({ where: { tokenHash }, include: { user: { include: { subscription: true } } } });`
+  - Return `null` if: no record; `record.revokedAt != null`; or
+    `record.expiresAt != null && record.expiresAt < new Date()`.
+  - Best-effort touch last-used (do **not** await-block on it failing):
+    `prisma.mcpToken.update({ where: { id: record.id }, data: { lastUsedAt: new Date() } }).catch(() => {})`.
+  - Return `record.user` (typed as `AuthUser` — import the type from `./clerk`;
+    it is the `User` with `subscription` included, matching `withAuth`).
+
+Imports: `import { randomBytes, createHash } from "crypto";`,
+`import prisma from "@/lib/db/prisma";`,
+`import type { AuthUser } from "./clerk";`,
+`import type { McpToken } from "@/generated/prisma/client";`.
+
+**Why a plain hash lookup and not a constant-time compare**: lookup is a DB
+equality on a 256-bit hash of a high-entropy secret; there is no
+low-entropy comparison in application code to time-attack. Do not add bcrypt.
+
+**Verify**: `pnpm typecheck` → exit 0.
+
+### Step 3: Add the token-issuing CLI script
+
+Create `scripts/issue-mcp-token.js` as **CommonJS** (match
+`scripts/inspect-bucket.js`). It takes a user email + a token name on argv,
+connects to Postgres via `pg`, finds the user, inserts a row, and prints the
+raw token once. Reimplement the tiny sha256 + token generation inline (the
+scripts intentionally don't import the `@/`-aliased TS lib — see
+`scripts/inspect-bucket.js` which reimplements `decrypt` for the same reason).
+
+Shape:
+```js
+require("dotenv").config();
+const { Client } = require("pg");
+const { randomBytes, createHash } = require("crypto");
+const { randomUUID } = require("crypto");
+
+const TOKEN_PREFIX = "s3dock_pat_";
+
+async function main() {
+  const email = process.argv[2];
+  const name = process.argv[3] || "cli-issued";
+  if (!email) {
+    console.error("Usage: node scripts/issue-mcp-token.js <user-email> [token-name]");
+    process.exit(1);
+  }
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    const u = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (u.rowCount === 0) throw new Error(`No user with email ${email}`);
+    const raw = TOKEN_PREFIX + randomBytes(32).toString("base64url");
+    const tokenHash = createHash("sha256").update(raw).digest("hex");
+    await db.query(
+      'INSERT INTO mcp_tokens (id, "userId", name, "tokenHash", prefix, "createdAt") VALUES ($1,$2,$3,$4,$5, now())',
+      [randomUUID(), u.rows[0].id, name, tokenHash, raw.slice(0, 12)]
+    );
+    console.log("\nToken (shown once — store it now):\n");
+    console.log(raw);
+    console.log("\nConfigure it as S3DOCK_MCP_TOKEN in the MCP client.\n");
+  } finally {
+    await db.end();
+  }
+}
+main().catch((e) => { console.error(e.message); process.exit(1); });
+```
+
+> Confirm the exact column names against the generated migration SQL in
+> `prisma/migrations/*/migration.sql` before trusting the `INSERT` — Prisma
+> quotes camelCase columns (`"userId"`, `"tokenHash"`, `"createdAt"`). If the
+> migration emitted different names, match them.
+
+**Verify**: with a valid `.env`,
+`node scripts/issue-mcp-token.js <an-existing-user-email> test-token`
+prints a `s3dock_pat_...` token and exits 0. (Skip if no dev DB is reachable;
+the unit test in Step 4 is the authoritative gate.)
+
+### Step 4: Re-export and test
+
+In `src/lib/auth/index.ts` add:
+```ts
+export { issueMcpToken, resolveMcpToken, TOKEN_PREFIX } from "./mcp-token";
+```
+
+Create `src/lib/auth/mcp-token.test.ts` (model its structure after an existing
+db-touching test, e.g. `src/lib/db/connections.test.ts`, for how `prisma` is
+mocked in this repo — read it first and mirror the mocking approach). Cover:
+- a freshly issued token resolves to its user (with `subscription` present);
+- a token not starting with `TOKEN_PREFIX` resolves to `null` without a DB call;
+- a revoked token (`revokedAt` set) resolves to `null`;
+- an expired token (`expiresAt` in the past) resolves to `null`;
+- two issued tokens have different `tokenHash` and `prefix` values.
+
+**Verify**: `pnpm test -- mcp-token` → all pass.
+
+## Test plan
+
+- New file `src/lib/auth/mcp-token.test.ts` covering the five cases above.
+- Use the same `prisma` mocking pattern as `src/lib/db/connections.test.ts`
+  (read it; do not invent a new mocking style).
+- Verification: `pnpm test -- mcp-token` → all pass (≥5 new assertions).
+
+## Done criteria
+
+Machine-checkable. ALL must hold:
+
+- [ ] `pnpm prisma generate` exits 0 and `McpToken` exists in `src/generated/prisma/client`
+- [ ] A migration directory `prisma/migrations/*_mcp_tokens/` exists with a `migration.sql`
+- [ ] `pnpm typecheck` exits 0
+- [ ] `pnpm test -- mcp-token` passes; the five cases above exist
+- [ ] `pnpm lint` exits 0
+- [ ] `grep -rn "resolveMcpToken" src/lib/auth/index.ts` returns a match
+- [ ] No files outside the in-scope list are modified (`git status`)
+- [ ] `plans/README.md` status row for 051 updated
+
+## STOP conditions
+
+Stop and report back (do not improvise) if:
+
+- The dev database is unreachable, so `prisma migrate dev` cannot run. Report
+  that the migration is authored but unapplied; do not fake the migration SQL.
+- `src/lib/auth/clerk.ts` does not export an `AuthUser` type that is the `User`
+  with `subscription` included (the resolver's return type depends on it).
+- The `connections.test.ts` prisma-mocking pattern can't be reused for a model
+  not present in older mocks — report rather than hand-rolling a divergent mock.
+- Any step's verification fails twice after a reasonable fix attempt.
+- You find yourself needing to edit `protect.ts`, `clerk.ts`, or any API route —
+  that means the additive boundary was crossed; stop.
+
+## Maintenance notes
+
+For the human/agent who owns this after it lands:
+
+- **Deferred on purpose**: a settings-page UI and an authenticated API route to
+  mint/list/revoke tokens. The CLI script is the MVP issuance path; a UI is the
+  obvious next plan once the MCP server (052) proves the flow.
+- **Token rotation/expiry**: `expiresAt` and `revokedAt` columns exist but only
+  the CLI sets neither today (tokens are non-expiring unless a future issuer
+  sets `expiresAt`). A revoke path (set `revokedAt`) is a one-line follow-up.
+- **Reviewer focus**: confirm the raw token is never logged or persisted (only
+  its sha256), and that `resolveMcpToken` returns `subscription`-included users
+  so metering downstream (plan 052) reads the correct tier.
+- If an HTTP/remote MCP transport is added later, `resolveMcpToken` is the
+  single chokepoint to wire into a `Bearer` header check — design it to stay
+  transport-agnostic (it already is: it takes a raw string, returns a user).

@@ -138,7 +138,7 @@ export function TeamMembersCard({
           <div className="space-y-3 rounded-lg border p-3">
             <p className="text-sm font-medium">Create invite link</p>
             <form onSubmit={handleCreateInvite} className="flex items-end gap-3">
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <Label htmlFor="invite-role" className="text-xs">
                   Role
                 </Label>
