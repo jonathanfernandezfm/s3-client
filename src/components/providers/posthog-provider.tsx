@@ -5,10 +5,11 @@ import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useEffect, Suspense } from "react";
+import { analyticsEnabled } from "@/lib/analytics";
 
 let posthogInitialized = false;
 const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-if (posthogKey && !posthogInitialized) {
+if (analyticsEnabled && posthogKey && !posthogInitialized) {
   posthog.init(posthogKey, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
     capture_pageview: false,
@@ -23,6 +24,7 @@ function PostHogPageView() {
   const ph = usePostHog();
 
   useEffect(() => {
+    if (!analyticsEnabled) return;
     if (pathname && ph) {
       const qs = searchParams?.toString();
       const url = window.origin + pathname + (qs ? `?${qs}` : "");
@@ -38,6 +40,7 @@ function PostHogUserIdentify() {
   const ph = usePostHog();
 
   useEffect(() => {
+    if (!analyticsEnabled) return;
     if (!isLoaded) return;
     if (user && ph) {
       ph.identify(user.id, {
