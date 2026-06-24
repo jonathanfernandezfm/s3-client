@@ -18,6 +18,7 @@ import { useBookmarks, useReorderBookmarks } from "@/lib/queries/bookmarks";
 import type { BookmarkResponse } from "@/lib/bookmarks-helpers";
 import { useTier } from "@/hooks/use-tier";
 import { ConnectionForm } from "@/components/connections/connection-form";
+import { FeedbackDialog } from "@/components/shared/feedback-dialog";
 import {
   Dialog,
   DialogContent,
@@ -537,6 +538,7 @@ export function AppSidebar() {
             <CreditCard className="h-4 w-4" />
             Billing
           </Link>
+          <FeedbackDialog />
         </div>
       </aside>
 
