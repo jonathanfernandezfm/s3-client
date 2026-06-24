@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db/prisma";
 import type { AuthUser } from "./clerk";
+import { resolveMcpToken, TOKEN_PREFIX } from "./mcp-token";
 
 type RouteContext = {
   params?: Promise<Record<string, string>>;
@@ -21,6 +22,23 @@ export function withAuth<T extends RouteContext = RouteContext>(
 ) {
   return async (req: NextRequest, context?: T) => {
     try {
+      // PAT Bearer token fast-path — bypasses Clerk for non-browser clients.
+      const authHeader = req.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const raw = authHeader.slice(7);
+        if (raw.startsWith(TOKEN_PREFIX)) {
+          const patUser = await resolveMcpToken(raw);
+          if (!patUser) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          }
+          const params = context?.params ? await context.params : {};
+          return handler(req, {
+            user: patUser,
+            params: params as T["params"] extends Promise<infer P> ? P : Record<string, string>,
+          });
+        }
+      }
+      // Existing Clerk session path (unchanged below this line)
       const { userId } = await auth();
 
       if (!userId) {
