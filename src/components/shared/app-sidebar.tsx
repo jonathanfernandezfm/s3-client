@@ -19,6 +19,7 @@ import type { BookmarkResponse } from "@/lib/bookmarks-helpers";
 import { useTier } from "@/hooks/use-tier";
 import { ConnectionForm } from "@/components/connections/connection-form";
 import { FeedbackDialog } from "@/components/shared/feedback-dialog";
+import { ChangelogDialog } from "@/components/changelog/changelog-dialog";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ import {
   GripVertical,
   Link2,
   CreditCard,
+  ScrollText,
 } from "lucide-react";
 import {
   DndContext,
@@ -157,6 +159,7 @@ export function AppSidebar() {
     useState<ConnectionResponse | null>(null);
   const [deletingConnection, setDeletingConnection] =
     useState<ConnectionResponse | null>(null);
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   const connectionsByWorkspace = connections.reduce<
     Record<string, ConnectionResponse[]>
@@ -539,6 +542,14 @@ export function AppSidebar() {
             Billing
           </Link>
           <FeedbackDialog />
+          <button
+            type="button"
+            onClick={() => setChangelogOpen(true)}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 w-full text-left"
+          >
+            <ScrollText className="h-4 w-4 shrink-0" />
+            Changelog
+          </button>
         </div>
       </aside>
 
@@ -597,6 +608,12 @@ export function AppSidebar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Changelog dialog */}
+      <ChangelogDialog
+        open={changelogOpen}
+        onOpenChange={setChangelogOpen}
+      />
     </>
   );
 }
