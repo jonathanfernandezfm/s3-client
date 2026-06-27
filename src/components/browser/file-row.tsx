@@ -298,6 +298,7 @@ function FileRowImpl({
               className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => { e.stopPropagation(); handleOpenProperties(); }}
               title="Properties"
+              aria-label="File properties"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
@@ -317,7 +318,7 @@ function FileRowImpl({
                   }}
                 />
               ) : (
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               )}
