@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatBytes, getTierDisplayName } from "@/lib/subscriptions/tiers";
 import { formatNumber } from "@/lib/utils";
 import { useUpgradeModalStore } from "@/lib/stores/upgrade-modal-store";
+import { useNotificationStore } from "@/lib/stores/notification-store";
 import type { TierConfig } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/generated/prisma/client";
 
@@ -67,6 +68,7 @@ function UsageMeter({
 export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTabProps) {
   const [portalLoading, setPortalLoading] = useState(false);
   const openPlansModal = useUpgradeModalStore((s) => s.open);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   async function handleManageBilling() {
     setPortalLoading(true);
@@ -74,11 +76,12 @@ export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTa
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        console.error("Portal error:", data.error);
-        // TODO: show toast notification
+        addNotification({ type: "error", title: "Couldn't open billing portal", error: data.error || "Please try again.", status: "error" });
         return;
       }
       if (data.url) window.location.href = data.url;
+    } catch {
+      addNotification({ type: "error", title: "Couldn't open billing portal", error: "Please try again.", status: "error" });
     } finally {
       setPortalLoading(false);
     }
@@ -155,12 +158,9 @@ export function BillingTab({ tier, limits, usage, hasStripeCustomer }: BillingTa
         {usage.connectionCount >= limits.maxConnections && limits.maxConnections !== -1 && (
           <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-amber-600 dark:text-amber-400">
             You&apos;ve used all {limits.maxConnections} connections.{" "}
-            <button
-              className="underline hover:no-underline"
-              onClick={() => openPlansModal()}
-            >
+            <Button variant="link" className="h-auto p-0 underline hover:no-underline" onClick={() => openPlansModal()}>
               {tier === "PRO" ? "Upgrade to Enterprise" : "Upgrade to PRO"}
-            </button>{" "}
+            </Button>{" "}
             to add {tier === "PRO" ? "unlimited" : "up to 10"} connections.
           </div>
         )}
