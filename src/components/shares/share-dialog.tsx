@@ -148,7 +148,7 @@ export function ShareDialog({ open, onOpenChange, connectionId, bucket, fileKey 
               <select
                 value={expirySec}
                 onChange={(e) => setExpirySec(Number(e.target.value))}
-                className="w-full h-9"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {EXPIRY_OPTIONS.map((o) => (
                   <option key={o.label} value={o.seconds}>{o.label}</option>
@@ -163,6 +163,7 @@ export function ShareDialog({ open, onOpenChange, connectionId, bucket, fileKey 
                   id="use-password"
                   checked={usePassword}
                   onChange={(e) => setUsePassword(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <Label htmlFor="use-password" className="font-normal cursor-pointer">
                   Password protect
@@ -185,6 +186,7 @@ export function ShareDialog({ open, onOpenChange, connectionId, bucket, fileKey 
                   id="use-cap"
                   checked={useCap}
                   onChange={(e) => setUseCap(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <Label htmlFor="use-cap" className="font-normal cursor-pointer">
                   Limit downloads

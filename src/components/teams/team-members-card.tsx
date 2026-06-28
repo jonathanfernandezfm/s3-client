@@ -146,7 +146,7 @@ export function TeamMembersCard({
                   id="invite-role"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as Role)}
-                  className="h-9 w-32"
+                  className="flex h-9 w-32 rounded-md border border-input bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="VIEWER">Viewer</option>
                   <option value="EDITOR">Editor</option>

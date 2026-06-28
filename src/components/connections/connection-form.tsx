@@ -272,6 +272,7 @@ export function ConnectionForm({
               type="checkbox"
               checked={formData.forcePathStyle}
               onChange={handleChange}
+              className="h-4 w-4 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <Label htmlFor="forcePathStyle" className="text-sm font-normal">
               Force path style (required for MinIO, etc.)

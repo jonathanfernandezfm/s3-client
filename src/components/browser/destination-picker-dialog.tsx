@@ -81,7 +81,7 @@ export function DestinationPickerDialog({
           <Label className="flex flex-col gap-1">
             Connection
             <select
-              className="h-9 rounded-md border bg-background px-2"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={connectionId}
               onChange={(e) => handleConnectionChange(e.target.value)}
             >
@@ -96,7 +96,7 @@ export function DestinationPickerDialog({
           <Label className="flex flex-col gap-1">
             Bucket
             <select
-              className="h-9 rounded-md border bg-background px-2"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={bucket}
               onChange={(e) => setBucket(e.target.value)}
               disabled={bucketsLoading || !connectionId}

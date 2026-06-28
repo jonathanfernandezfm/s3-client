@@ -40,7 +40,7 @@ export function PasswordForm({ slug, error }: Props) {
         )}
         <button
           type="submit"
-          className="w-full bg-primary text-primary-foreground rounded-md py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+          className="w-full bg-primary text-primary-foreground rounded-md py-2 text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Unlock
         </button>

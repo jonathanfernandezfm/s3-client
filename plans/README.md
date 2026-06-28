@@ -129,6 +129,7 @@ and update your row when done.
 | 058  | Accessible names for icon-only buttons (preview zoom, file-row/tile menus, connection menu, note menu) | P2 | S | — | DONE |
 | 059  | Version history: fix diff-view fetch lifecycle + wire up the disabled "Copy to…" button | P1 | M | — | DONE |
 | 060  | Surface billing-portal errors to the user (resolve TODO) + style the upgrade-prompt button | P1 | S | — | DONE |
+| 062  | Consistent styling + focus rings for bare select/checkbox/button form controls | P2 | S | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
