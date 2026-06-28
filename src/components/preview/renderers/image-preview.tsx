@@ -22,6 +22,7 @@ export default function ImagePreview({ presignedUrl, filename }: RendererProps) 
           size="icon"
           onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
           disabled={zoom <= 0.25}
+          aria-label="Zoom out"
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
@@ -33,6 +34,7 @@ export default function ImagePreview({ presignedUrl, filename }: RendererProps) 
           size="icon"
           onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
           disabled={zoom >= 3}
+          aria-label="Zoom in"
         >
           <ZoomIn className="h-4 w-4" />
         </Button>

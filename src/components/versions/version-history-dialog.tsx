@@ -15,7 +15,12 @@ import {
   useUndeleteVersion,
   usePurgeVersion,
   useVersionPresignUrl,
+  useCopyVersion,
 } from "@/lib/queries/versions";
+import {
+  DestinationPickerDialog,
+  type Destination,
+} from "@/components/browser/destination-picker-dialog";
 import { useBucketVersioning } from "@/lib/queries/buckets";
 import { canDiff } from "@/lib/versions/can-diff";
 import { formatBytes, getFileExtension, cn } from "@/lib/utils";
@@ -264,9 +269,37 @@ function DiffView({
   const [aText, setAText] = useState<string | null>(null);
   const [bText, setBText] = useState<string | null>(null);
 
-  useMemo(() => {
-    if (aUrl.data?.url) fetch(aUrl.data.url).then((r) => r.text()).then(setAText);
-    if (bUrl.data?.url) fetch(bUrl.data.url).then((r) => r.text()).then(setBText);
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    setAText(null);
+    setBText(null);
+
+    async function fetchTexts() {
+      if (aUrl.data?.url) {
+        try {
+          const res = await fetch(aUrl.data.url, { signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          setAText(await res.text());
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") setAText("(failed to load this version)");
+        }
+      }
+      if (bUrl.data?.url) {
+        try {
+          const res = await fetch(bUrl.data.url, { signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          setBText(await res.text());
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") setBText("(failed to load this version)");
+        }
+      }
+    }
+
+    fetchTexts();
+
+    return () => controller.abort();
   }, [aUrl.data?.url, bUrl.data?.url]);
 
   if (aText === null || bText === null) {
@@ -305,12 +338,14 @@ function ActionBar({
   const restore = useRestoreVersion();
   const undelete = useUndeleteVersion();
   const purge = usePurgeVersion();
+  const copyVersion = useCopyVersion();
   const presign = useVersionPresignUrl(
     { connectionId, bucket, key: version.key, versionId: version.versionId },
     { enabled: !version.isDeleteMarker },
   );
   const addNotification = useNotificationStore((s) => s.addNotification);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [showCopyTo, setShowCopyTo] = useState(false);
 
   if (version.isDeleteMarker) {
     return (
@@ -382,7 +417,12 @@ function ActionBar({
           <Download className="h-3 w-3 mr-1" />
           Download
         </Button>
-        <Button size="sm" variant="ghost" disabled>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowCopyTo(true)}
+          disabled={copyVersion.isPending}
+        >
           <CopyIcon className="h-3 w-3 mr-1" />
           Copy to…
         </Button>
@@ -420,6 +460,38 @@ function ActionBar({
           loading={purge.isPending}
         />
       )}
+
+      <DestinationPickerDialog
+        open={showCopyTo}
+        mode="copy"
+        count={1}
+        defaultConnectionId={connectionId}
+        defaultBucket={bucket}
+        onCancel={() => setShowCopyTo(false)}
+        onConfirm={(dest: Destination) => {
+          const filename = version.key.split("/").pop() || version.key;
+          const targetKey = dest.path + filename;
+          copyVersion.mutate(
+            {
+              connectionId,
+              bucket,
+              key: version.key,
+              versionId: version.versionId,
+              targetConnectionId: dest.connectionId,
+              targetBucket: dest.bucket,
+              targetKey,
+            },
+            {
+              onSuccess: () => {
+                addNotification({ type: "info", title: `Copied version to ${targetKey}.`, status: "completed" });
+                setShowCopyTo(false);
+              },
+              onError: (e) =>
+                addNotification({ type: "error", title: "Copy failed", error: (e as Error).message, status: "error" }),
+            },
+          );
+        }}
+      />
     </>
   );
 }

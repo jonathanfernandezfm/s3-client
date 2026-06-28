@@ -207,7 +207,7 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                           className="h-6 w-6"
                           asChild
                         >
-                          <Link href={`/app/connections/${connection.id}?tab=overview`}>
+                          <Link href={`/app/connections/${connection.id}?tab=overview`} aria-label="Connection settings">
                             <Settings className="h-3.5 w-3.5" />
                           </Link>
                         </Button>
@@ -218,6 +218,7 @@ export function ConnectionList({ onAdd, onEdit, onImport }: ConnectionListProps)
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
+                                aria-label="More connection options"
                               >
                                 <MoreVertical className="h-3.5 w-3.5" />
                               </Button>
