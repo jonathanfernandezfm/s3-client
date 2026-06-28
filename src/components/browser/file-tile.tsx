@@ -211,6 +211,7 @@ function FileTileImpl({
                     size="icon"
                     className="h-7 w-7 bg-background/80 backdrop-blur-sm border shadow-sm"
                     onClick={(e) => e.stopPropagation()}
+                    aria-label="File options"
                   >
                     <MoreVertical className="h-3.5 w-3.5" />
                   </Button>
